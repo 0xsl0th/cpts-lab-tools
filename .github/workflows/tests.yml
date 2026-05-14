@@ -7,10 +7,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Pin a wide terminal so Rich/Typer error panels render at a stable width;
-    # the CLI tests assert on un-wrapped error-message substrings.
-    env:
-      COLUMNS: "200"
     strategy:
       fail-fast: false
       matrix:
@@ -33,4 +29,10 @@ jobs:
         run: ruff check .
 
       - name: Run tests
+        # Typer force-enables Rich colored output when GITHUB_ACTIONS is set,
+        # which injects ANSI codes into CLI error messages and breaks the
+        # plain-substring assertions in tests/test_cli.py. Clearing the var for
+        # this step makes the CLI render exactly as it does locally.
+        env:
+          GITHUB_ACTIONS: ""
         run: pytest
