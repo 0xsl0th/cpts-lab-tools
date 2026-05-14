@@ -162,7 +162,11 @@ labs/target/
 └── report.md
 ```
 
-### Generate an Obsidian note template
+### Generate an Obsidian note template (legacy)
+
+`obsidian-note` is a simple single-file note scaffold from before the Obsidian
+vault renderer existed. For new work, prefer `workspace init` + `workspace
+suggest` — the generated vault is richer and stays in sync with scan results.
 
 ```bash
 cpts-tools obsidian-note target --ip 10.10.10.5 > target.md
@@ -170,7 +174,13 @@ cpts-tools obsidian-note target --ip 10.10.10.5 > target.md
 
 ### Suggest the next steps from an nmap scan
 
-`suggest-next` turns parsed nmap results into a service-based, prioritized methodology
+`suggest-next` is the underlying methodology generator. For the typical case
+(one workspace, drop a scan into `scans/`, get a vault back) prefer
+`cpts-tools workspace suggest` — it picks up the latest scan and the workspace
+metadata automatically. Reach for `suggest-next` directly when you want to
+point at an arbitrary scan file or override the target metadata.
+
+It turns parsed nmap results into a service-based, prioritized methodology
 document. Each detected service gets a checklist, command table, expected output,
 verification steps, troubleshooting matrix, and a draft report note. Lab placeholders
 (`[USER]`, `[PASS]`, `[LHOST]`, `[LPORT]`) are preserved for the operator to fill in.
@@ -190,15 +200,15 @@ Supported input formats:
 cpts-tools suggest-next \
   -i scans/target \
   --input-format auto \
-  --target 10.129.x.x \
+  --target 10.10.10.5 \
   --host target.htb \
   --domain target.htb \
   -o outputs/next.md
 
 # Force a specific parser
-cpts-tools suggest-next -i scans/target.nmap  --input-format normal   --target 10.129.x.x
-cpts-tools suggest-next -i scans/target.gnmap --input-format grepable --target 10.129.x.x
-cpts-tools suggest-next -i scans/target.xml   --input-format xml      --target 10.129.x.x
+cpts-tools suggest-next -i scans/target.nmap  --input-format normal   --target 10.10.10.5
+cpts-tools suggest-next -i scans/target.gnmap --input-format grepable --target 10.10.10.5
+cpts-tools suggest-next -i scans/target.xml   --input-format xml      --target 10.10.10.5
 ```
 
 The simplest invocation derives the target IP from the scan and prints Markdown to
@@ -208,7 +218,7 @@ stdout:
 cpts-tools suggest-next -i scans/target.xml
 ```
 
-Excerpt of the output:
+Excerpt of the default `md` output:
 
 ```markdown
 # Methodology — 10.10.10.5
@@ -229,8 +239,8 @@ Excerpt of the output:
 ```
 
 Supported services in this release: SMB, HTTP, HTTPS, FTP, SSH, DNS, SMTP, LDAP,
-Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP. Open ports without a workflow are listed
-under an **Unmapped Services** section so nothing is silently dropped.
+Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS. Open ports without a workflow are
+listed under an **Unmapped Services** section so nothing is silently dropped.
 
 #### Obsidian vault output
 
@@ -241,7 +251,7 @@ parents) if it does not already exist.
 ```bash
 cpts-tools suggest-next \
   -i scans/target \
-  --target 10.129.x.x \
+  --target 10.10.10.5 \
   --host target.htb \
   --domain target.htb \
   --output-format obsidian \
