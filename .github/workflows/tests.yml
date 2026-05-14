@@ -29,9 +29,4 @@ jobs:
         run: ruff check .
 
       - name: Run tests
-        # Typer force-enables Rich colored output when GITHUB_ACTIONS is set,
-        # which injects ANSI codes into CLI error text and breaks the plain-
-        # substring assertions in tests/test_cli.py. GitHub re-injects
-        # GITHUB_ACTIONS into every step's environment (a step-level `env:`
-        # block can't override it), so unset it for just the pytest process.
-        run: env -u GITHUB_ACTIONS pytest
+        run: pytest

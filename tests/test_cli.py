@@ -1,3 +1,4 @@
+import re
 import time
 from pathlib import Path
 
@@ -6,6 +7,18 @@ from typer.testing import CliRunner
 from cpts_tools.cli import app
 
 runner = CliRunner()
+
+# Typer force-enables Rich colored output in some environments (notably when
+# GITHUB_ACTIONS is set), which injects ANSI escape codes into CLI error
+# messages. Strip them so error-string assertions match the plain text
+# regardless of how Typer chose to render — keeping tests stable locally and
+# in CI.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+
+def strip_ansi(text: str) -> str:
+    """Return *text* with ANSI escape sequences removed."""
+    return _ANSI_RE.sub("", text)
 
 
 def test_parse_nmap_prints_open_service_summary(tmp_path: Path) -> None:
@@ -155,25 +168,25 @@ def test_make_hosts_preserves_alias_casing() -> None:
 def test_make_hosts_no_args_errors() -> None:
     result = runner.invoke(app, ["make-hosts"])
     assert result.exit_code != 0
-    assert "IP and at least one hostname" in result.output
+    assert "IP and at least one hostname" in strip_ansi(result.output)
 
 
 def test_make_hosts_only_ip_errors() -> None:
     result = runner.invoke(app, ["make-hosts", "10.10.10.5"])
     assert result.exit_code != 0
-    assert "at least one hostname" in result.output
+    assert "at least one hostname" in strip_ansi(result.output)
 
 
 def test_make_hosts_flag_form_requires_ip() -> None:
     result = runner.invoke(app, ["make-hosts", "--host", "target.htb"])
     assert result.exit_code != 0
-    assert "--host and --aliases require --ip" in result.output
+    assert "--host and --aliases require --ip" in strip_ansi(result.output)
 
 
 def test_make_hosts_ip_flag_alone_errors_without_hostname() -> None:
     result = runner.invoke(app, ["make-hosts", "--ip", "10.10.10.5"])
     assert result.exit_code != 0
-    assert "hostname" in result.output
+    assert "hostname" in strip_ansi(result.output)
 
 
 def test_report_init_creates_machine_structure(tmp_path: Path) -> None:
@@ -372,7 +385,7 @@ def test_suggest_next_errors_when_no_scan_files_match_basename(tmp_path: Path) -
         ["suggest-next", "-i", str(tmp_path / "missing")],
     )
     assert result.exit_code != 0
-    assert "No scan file found" in result.output
+    assert "No scan file found" in strip_ansi(result.output)
 
 
 def test_suggest_next_obsidian_writes_vault_tree(tmp_path: Path) -> None:
@@ -427,7 +440,7 @@ def test_suggest_next_obsidian_requires_output_dir() -> None:
         ],
     )
     assert result.exit_code != 0
-    assert "requires -o" in result.output
+    assert "requires -o" in strip_ansi(result.output)
 
 
 def test_suggest_next_obsidian_refuses_to_overwrite_without_force(tmp_path: Path) -> None:
@@ -459,8 +472,9 @@ def test_suggest_next_obsidian_refuses_to_overwrite_without_force(tmp_path: Path
         ],
     )
     assert second.exit_code != 0
-    assert "already exist" in second.output
-    assert "--force" in second.output
+    output = strip_ansi(second.output)
+    assert "already exist" in output
+    assert "--force" in output
 
 
 def test_suggest_next_obsidian_force_allows_overwrite(tmp_path: Path) -> None:
@@ -566,7 +580,7 @@ def test_workspace_init_refuses_existing_without_force(tmp_path: Path) -> None:
         ["workspace", "init", "target", "-o", str(tmp_path)],
     )
     assert second.exit_code != 0
-    assert "already initialized" in second.output
+    assert "already initialized" in strip_ansi(second.output)
 
 
 def test_workspace_suggest_generates_methodology_from_latest_scan(
@@ -628,7 +642,7 @@ def test_workspace_suggest_md_mode_writes_single_file(tmp_path: Path) -> None:
 def test_workspace_suggest_errors_when_no_metadata(tmp_path: Path) -> None:
     result = runner.invoke(app, ["workspace", "suggest", str(tmp_path)])
     assert result.exit_code != 0
-    assert "workspace init" in result.output
+    assert "workspace init" in strip_ansi(result.output)
 
 
 def test_workspace_suggest_errors_when_no_scan(tmp_path: Path) -> None:
@@ -638,7 +652,7 @@ def test_workspace_suggest_errors_when_no_scan(tmp_path: Path) -> None:
     )
     result = runner.invoke(app, ["workspace", "suggest", str(tmp_path / "target")])
     assert result.exit_code != 0
-    assert "No scan file" in result.output
+    assert "No scan file" in strip_ansi(result.output)
 
 
 def test_finding_add_records_in_report(tmp_path: Path) -> None:
@@ -750,7 +764,7 @@ def test_finding_add_errors_outside_workspace(tmp_path: Path) -> None:
         ],
     )
     assert result.exit_code != 0
-    assert "workspace init" in result.output
+    assert "workspace init" in strip_ansi(result.output)
 
 
 def test_finding_add_rejects_invalid_severity(tmp_path: Path) -> None:
@@ -874,9 +888,10 @@ def test_workflow_show_unknown_service_errors() -> None:
     result = runner.invoke(app, ["workflow", "show", "does-not-exist"])
 
     assert result.exit_code != 0
-    assert "Unknown service workflow" in result.output
+    output = strip_ansi(result.output)
+    assert "Unknown service workflow" in output
     # Help text lists known IDs.
-    assert "smb" in result.output
+    assert "smb" in output
 
 
 def test_workflow_list_shows_categories() -> None:
