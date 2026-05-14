@@ -1,0 +1,33 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Editor/IDE local config
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/
+
+# Local generated lab/tool outputs
+outputs/
+evidence/
+*.log
+.env
+
+# Hidden from GitHub (kept locally only)
+.gitignore
+CLAUDE.md
