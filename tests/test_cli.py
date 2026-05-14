@@ -806,6 +806,80 @@ def test_finding_list_shows_recorded_findings(tmp_path: Path) -> None:
     assert "smb:445" in result.output
 
 
+def test_workflow_list_includes_known_services() -> None:
+    result = runner.invoke(app, ["workflow", "list"])
+
+    assert result.exit_code == 0, result.output
+    assert "smb" in result.output
+    assert "SMB" in result.output
+    assert "139/tcp, 445/tcp" in result.output
+    assert "kerberos" in result.output
+    assert "nfs" in result.output
+    # Header row present.
+    assert "Priority" in result.output
+
+
+def test_workflow_list_orders_by_priority() -> None:
+    result = runner.invoke(app, ["workflow", "list"])
+
+    assert result.exit_code == 0, result.output
+    # SMB priority 10 comes before SSH priority 35.
+    smb_index = result.output.index("smb")
+    ssh_index = result.output.index("ssh ")  # trailing space to avoid matching "ssh" in another field
+    assert smb_index < ssh_index
+
+
+def test_workflow_show_prints_full_workflow() -> None:
+    result = runner.invoke(app, ["workflow", "show", "smb"])
+
+    assert result.exit_code == 0, result.output
+    assert "SMB (139/445) — Share & RPC Enumeration" in result.output
+    assert "### Checklist" in result.output
+    assert "### Commands" in result.output
+    assert "### Troubleshooting" in result.output
+
+
+def test_workflow_show_substitutes_target_placeholders() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "workflow",
+            "show",
+            "smb",
+            "--ip",
+            "10.10.10.5",
+            "--host",
+            "target.htb",
+            "--domain",
+            "target.htb",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "10.10.10.5" in result.output
+    assert "[TARGET_IP]" not in result.output
+    # Operator placeholders preserved.
+    assert "[USER]" in result.output
+    assert "[PASS]" in result.output
+
+
+def test_workflow_show_without_metadata_keeps_placeholders() -> None:
+    result = runner.invoke(app, ["workflow", "show", "smb"])
+
+    assert result.exit_code == 0, result.output
+    assert "[TARGET_IP]" in result.output
+    # No ip provided → [TARGET_HOST] stays as placeholder where the workflow used it.
+
+
+def test_workflow_show_unknown_service_errors() -> None:
+    result = runner.invoke(app, ["workflow", "show", "does-not-exist"])
+
+    assert result.exit_code != 0
+    assert "Unknown service workflow" in result.output
+    # Help text lists known IDs.
+    assert "smb" in result.output
+
+
 def test_finding_list_on_empty_report_returns_placeholder_row(tmp_path: Path) -> None:
     runner.invoke(
         app,

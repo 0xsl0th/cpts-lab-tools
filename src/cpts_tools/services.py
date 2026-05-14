@@ -49,6 +49,11 @@ _PORT_INDEX: dict[tuple[int, str], str] = {
 }
 
 
+def ports_for(canonical_id: str) -> list[tuple[int, str]]:
+    """Return sorted (port, proto) pairs known for a canonical service ID."""
+    return sorted(_PORT_MAP.get(canonical_id, set()))
+
+
 def canonicalize(
     service_name: str | None,
     port: str | int | None,

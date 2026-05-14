@@ -17,8 +17,15 @@ from .nmap import (
     parse_nmap_normal,
     parse_nmap_services,
 )
-from .render import TargetContext, render_methodology, render_obsidian_vault
-from .services import canonicalize
+from .render import (
+    TargetContext,
+    render_methodology,
+    render_obsidian_vault,
+    render_workflow,
+)
+from .services import canonicalize, ports_for
+from .workflows import all_ids as all_workflow_ids
+from .workflows import lookup as lookup_workflow
 from .workflows import resolve as resolve_workflows
 from .workspace import (
     find_all_scans,
@@ -36,8 +43,13 @@ workspace_app = typer.Typer(
 finding_app = typer.Typer(
     help="Record and list engagement findings inside a workspace's report.md."
 )
+workflow_app = typer.Typer(
+    help="Inspect the service workflow registry — list available workflows and "
+    "print one to stdout without needing a workspace or a scan."
+)
 app.add_typer(workspace_app, name="workspace")
 app.add_typer(finding_app, name="finding")
+app.add_typer(workflow_app, name="workflow")
 
 
 class InputFormat(str, Enum):
@@ -730,6 +742,92 @@ def finding_list(
         raise typer.BadParameter(str(exc)) from exc
 
     typer.echo(format_findings_table(findings))
+
+
+def _format_workflow_table() -> str:
+    headers = ["ID", "Display", "Priority", "Ports"]
+    rows: list[list[str]] = []
+    for service_id in all_workflow_ids():
+        workflow = lookup_workflow(service_id)
+        if workflow is None:
+            continue
+        port_list = ports_for(service_id)
+        ports_str = (
+            ", ".join(f"{port}/{proto}" for port, proto in port_list)
+            if port_list
+            else "-"
+        )
+        rows.append(
+            [service_id, workflow.display_name, str(workflow.priority), ports_str]
+        )
+    rows.sort(key=lambda r: (int(r[2]), r[0]))
+
+    widths = [
+        max(len(row[i]) for row in [headers, *rows]) for i in range(len(headers))
+    ]
+
+    def render_row(row: list[str]) -> str:
+        return "  ".join(value.ljust(widths[i]) for i, value in enumerate(row))
+
+    separator = "  ".join("-" * w for w in widths)
+    return "\n".join([render_row(headers), separator, *(render_row(row) for row in rows)])
+
+
+@workflow_app.command("list")
+def workflow_list() -> None:
+    """List every service workflow the tool knows about."""
+    typer.echo(_format_workflow_table())
+
+
+@workflow_app.command("show")
+def workflow_show(
+    service: Annotated[
+        str,
+        typer.Argument(
+            help=(
+                "Canonical service ID (e.g. smb, http, ldap). "
+                "Run `cpts-tools workflow list` to see all available IDs."
+            ),
+        ),
+    ],
+    ip: Annotated[
+        str | None,
+        typer.Option(
+            "--ip",
+            help="Substitute [TARGET_IP] placeholders with this value.",
+        ),
+    ] = None,
+    host: Annotated[
+        str | None,
+        typer.Option(
+            "--host",
+            help="Substitute [TARGET_HOST] placeholders with this value.",
+        ),
+    ] = None,
+    domain: Annotated[
+        str | None,
+        typer.Option(
+            "--domain",
+            help="Substitute [DOMAIN] placeholders with this value.",
+        ),
+    ] = None,
+) -> None:
+    """Print one service workflow as Markdown — no workspace or scan required."""
+    workflow = lookup_workflow(service)
+    if workflow is None:
+        known = ", ".join(sorted(all_workflow_ids()))
+        raise typer.BadParameter(
+            f"Unknown service workflow '{service}'. Known IDs: {known}."
+        )
+
+    context = TargetContext(
+        target_ip=ip or "[TARGET_IP]",
+        target_host=host,
+        domain=domain,
+        detected=(),
+        unmapped=(),
+    )
+    typer.echo("\n".join(render_workflow(workflow, context)))
 
 
 if __name__ == "__main__":

@@ -10,6 +10,21 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
+## Commands at a glance
+
+| Command | What it does |
+|---------|--------------|
+| `workspace init` | Scaffold a target folder, metadata file, and a richer report scaffold. |
+| `workspace suggest` | Generate methodology from `scans/` — merges every scan file by default. |
+| `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
+| `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry — no scan or workspace needed. |
+| `make-hosts` | Print an `/etc/hosts` entry plus a copy-paste shell command. Read-only. |
+| `parse-nmap` | Tabular summary of open services from an nmap XML scan. |
+| `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
+| `report-init` / `obsidian-note` | Legacy single-target scaffolds; prefer `workspace init`. |
+
+Run `cpts-tools --help` (or `cpts-tools <command> --help`) for full option lists.
+
 ## Lab session walkthrough
 
 End-to-end flow for a typical HTB/CPTS target. Replace placeholders with the
@@ -204,6 +219,39 @@ handy for sanity-checking what is captured so far without opening the file:
 2  Medium    HTTP debug endpoint exposed  http:80
 ```
 
+### Browse the workflow registry
+
+`workflow list` and `workflow show` expose the service workflow registry
+directly — useful for "remind me what to check for LDAP" or for picking a
+starting point on a target you haven't scanned yet. Neither command needs a
+workspace or a scan file.
+
+```bash
+cpts-tools workflow list
+```
+
+```text
+ID        Display   Priority  Ports
+--------  --------  --------  ------------------------------------
+smb       SMB       10        139/tcp, 445/tcp
+http      HTTP      15        80/tcp, 8000/tcp, 8008/tcp, 8080/tcp
+https     HTTPS     15        443/tcp, 8443/tcp
+kerberos  Kerberos  15        88/tcp, 88/udp
+…
+```
+
+```bash
+# Print one workflow (Markdown) to stdout with placeholders intact
+cpts-tools workflow show smb
+
+# Or substitute target metadata while rendering
+cpts-tools workflow show smb --ip 10.10.10.5 --host target.htb --domain target.htb
+```
+
+The Markdown is the same per-service content that `workspace suggest` and
+`suggest-next` write into the methodology document — `workflow show` just
+prints one section to stdout instead of writing a full vault.
+
 ### Initialize a report folder (legacy)
 
 `report-init` is the simpler predecessor of `workspace init` — it creates the
@@ -301,8 +349,10 @@ Excerpt of the default `md` output:
 ```
 
 Supported services in this release: SMB, HTTP, HTTPS, FTP, SSH, DNS, SMTP, LDAP,
-Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS. Open ports without a workflow are
-listed under an **Unmapped Services** section so nothing is silently dropped.
+Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS (15 total). Run
+`cpts-tools workflow list` for the live registry with priorities and port
+mappings. Open ports without a workflow are listed under an **Unmapped Services**
+section so nothing is silently dropped.
 
 #### Obsidian vault output
 

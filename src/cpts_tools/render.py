@@ -44,7 +44,12 @@ def _detected_table(detected: tuple[dict[str, str], ...]) -> list[str]:
     return rows
 
 
-def _render_workflow(workflow: Workflow, context: TargetContext) -> list[str]:
+def render_workflow(workflow: Workflow, context: TargetContext) -> list[str]:
+    """Render one workflow as a list of Markdown lines.
+
+    Public entry point used by `render_methodology` and by the
+    `workflow show` CLI command.
+    """
     lines: list[str] = [f"## {_apply_placeholders(workflow.title, context)}", ""]
     lines.append(f"**When to use:** {_apply_placeholders(workflow.when_to_use, context)}")
     lines.append("")
@@ -126,7 +131,7 @@ def render_methodology(context: TargetContext, workflows: list[Workflow]) -> str
         lines.append("Work top-to-bottom; RCE-class services are ordered first.")
         lines.append("")
         for workflow in workflows:
-            lines.extend(_render_workflow(workflow, context))
+            lines.extend(render_workflow(workflow, context))
     else:
         lines.append("_No workflow matched the detected services._")
         lines.append("")
