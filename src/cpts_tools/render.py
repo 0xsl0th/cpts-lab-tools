@@ -2,7 +2,9 @@
 
 from dataclasses import dataclass
 
-from .workflows import Workflow, lookup as lookup_workflow
+from .workflows import Workflow, by_category, lookup as lookup_workflow
+
+_POST_FOOTHOLD_CATEGORIES = ("post-foothold", "lateral-movement")
 
 
 @dataclass(frozen=True)
@@ -102,6 +104,30 @@ def render_workflow(workflow: Workflow, context: TargetContext) -> list[str]:
     return lines
 
 
+def _after_foothold_lines() -> list[str]:
+    """Footer pointing at post-foothold workflows reachable via `workflow show`."""
+    followups: list[Workflow] = []
+    for category in _POST_FOOTHOLD_CATEGORIES:
+        followups.extend(by_category(category))
+    if not followups:
+        return []
+
+    lines = [
+        "## After a Foothold",
+        "",
+        "Service enumeration above gets you to initial access. Once you have a "
+        "shell or a valid credential, continue with the post-foothold workflows "
+        "(no scan required):",
+        "",
+    ]
+    for workflow in followups:
+        lines.append(
+            f"- `cpts-tools workflow show {workflow.service_id}` — {workflow.title}"
+        )
+    lines.append("")
+    return lines
+
+
 def render_methodology(context: TargetContext, workflows: list[Workflow]) -> str:
     host_line = context.target_host or "[TARGET_HOST]"
     domain_line = context.domain or "[DOMAIN]"
@@ -150,6 +176,8 @@ def render_methodology(context: TargetContext, workflows: list[Workflow]) -> str
             ).rstrip()
             lines.append(label)
         lines.append("")
+
+    lines.extend(_after_foothold_lines())
 
     lines.append("## Aggregated Report Note Draft")
     lines.append("")
@@ -320,6 +348,8 @@ def _render_index(context: TargetContext, workflows: list[Workflow], has_unmappe
         lines.append("")
         lines.append("See [[unmapped|Unmapped Services]] for open ports without a workflow.")
         lines.append("")
+
+    lines.extend(_after_foothold_lines())
 
     lines.append("## Aggregated Report Note Draft")
     lines.append("")

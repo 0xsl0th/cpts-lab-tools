@@ -135,6 +135,18 @@ def test_index_skips_unmapped_section_when_none() -> None:
     assert "Unmapped Services" not in vault["index.md"]
 
 
+def test_index_includes_after_foothold_section() -> None:
+    vault = render_obsidian_vault(_ctx(), resolve(["smb"]))
+    index = vault["index.md"]
+
+    assert "## After a Foothold" in index
+    assert "cpts-tools workflow show linux-privesc" in index
+    assert "cpts-tools workflow show pivoting" in index
+    # No per-service notes are created for post-foothold workflows.
+    assert "services/linux-privesc.md" not in vault
+    assert "services/pivoting.md" not in vault
+
+
 def test_index_has_methodology_moc_tags() -> None:
     vault = render_obsidian_vault(_ctx(), resolve(["smb"]))
     index = vault["index.md"]

@@ -221,36 +221,51 @@ handy for sanity-checking what is captured so far without opening the file:
 
 ### Browse the workflow registry
 
-`workflow list` and `workflow show` expose the service workflow registry
-directly — useful for "remind me what to check for LDAP" or for picking a
-starting point on a target you haven't scanned yet. Neither command needs a
-workspace or a scan file.
+`workflow list` and `workflow show` expose the workflow registry directly —
+useful for "remind me what to check for LDAP" or for picking a starting point
+on a target you haven't scanned yet. Neither command needs a workspace or a
+scan file.
+
+Workflows fall into three categories:
+
+- **`service-enum`** — per-service enumeration methodology (SMB, HTTP, LDAP, …).
+  These are what `suggest-next` / `workspace suggest` auto-select from a scan.
+- **`post-foothold`** — what to do once you have a shell or a valid credential:
+  `linux-privesc`, `windows-privesc`, `ad-foothold`.
+- **`lateral-movement`** — `pivoting`: tunneling and internal network access.
+
+Post-foothold and lateral-movement workflows have no ports, so a scan never
+auto-selects them — reach them with `workflow show`.
 
 ```bash
 cpts-tools workflow list
 ```
 
 ```text
-ID        Display   Priority  Ports
---------  --------  --------  ------------------------------------
-smb       SMB       10        139/tcp, 445/tcp
-http      HTTP      15        80/tcp, 8000/tcp, 8008/tcp, 8080/tcp
-https     HTTPS     15        443/tcp, 8443/tcp
-kerberos  Kerberos  15        88/tcp, 88/udp
+Category          ID               Display          Priority  Ports
+----------------  ---------------  ---------------  --------  --------------------
+service-enum      smb              SMB              10        139/tcp, 445/tcp
+service-enum      http             HTTP             15        80/tcp, 8000/tcp, …
 …
+post-foothold     linux-privesc    Linux Privesc    50        -
+post-foothold     windows-privesc  Windows Privesc  51        -
+post-foothold     ad-foothold      AD Foothold      52        -
+lateral-movement  pivoting         Pivoting         60        -
 ```
 
 ```bash
 # Print one workflow (Markdown) to stdout with placeholders intact
 cpts-tools workflow show smb
+cpts-tools workflow show linux-privesc
 
 # Or substitute target metadata while rendering
-cpts-tools workflow show smb --ip 10.10.10.5 --host target.htb --domain target.htb
+cpts-tools workflow show ad-foothold --domain target.htb
 ```
 
-The Markdown is the same per-service content that `workspace suggest` and
-`suggest-next` write into the methodology document — `workflow show` just
-prints one section to stdout instead of writing a full vault.
+The Markdown is the same per-workflow content that `workspace suggest` and
+`suggest-next` write into the methodology document. Those two commands also
+append an **After a Foothold** footer pointing at the post-foothold workflows,
+so the generated methodology carries you past initial access.
 
 ### Initialize a report folder (legacy)
 
@@ -348,11 +363,13 @@ Excerpt of the default `md` output:
 ...
 ```
 
-Supported services in this release: SMB, HTTP, HTTPS, FTP, SSH, DNS, SMTP, LDAP,
-Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS (15 total). Run
-`cpts-tools workflow list` for the live registry with priorities and port
-mappings. Open ports without a workflow are listed under an **Unmapped Services**
-section so nothing is silently dropped.
+Supported service-enum workflows in this release: SMB, HTTP, HTTPS, FTP, SSH,
+DNS, SMTP, LDAP, Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS (15 total), plus
+four post-foothold workflows — `linux-privesc`, `windows-privesc`, `ad-foothold`,
+and `pivoting`. Run `cpts-tools workflow list` for the live registry with
+categories, priorities, and port mappings. Open ports without a service-enum
+workflow are listed under an **Unmapped Services** section so nothing is
+silently dropped.
 
 #### Obsidian vault output
 

@@ -744,8 +744,15 @@ def finding_list(
     typer.echo(format_findings_table(findings))
 
 
+_CATEGORY_ORDER: dict[str, int] = {
+    "service-enum": 0,
+    "post-foothold": 1,
+    "lateral-movement": 2,
+}
+
+
 def _format_workflow_table() -> str:
-    headers = ["ID", "Display", "Priority", "Ports"]
+    headers = ["Category", "ID", "Display", "Priority", "Ports"]
     rows: list[list[str]] = []
     for service_id in all_workflow_ids():
         workflow = lookup_workflow(service_id)
@@ -758,9 +765,17 @@ def _format_workflow_table() -> str:
             else "-"
         )
         rows.append(
-            [service_id, workflow.display_name, str(workflow.priority), ports_str]
+            [
+                workflow.category,
+                service_id,
+                workflow.display_name,
+                str(workflow.priority),
+                ports_str,
+            ]
         )
-    rows.sort(key=lambda r: (int(r[2]), r[0]))
+    rows.sort(
+        key=lambda r: (_CATEGORY_ORDER.get(r[0], 99), int(r[3]), r[1])
+    )
 
     widths = [
         max(len(row[i]) for row in [headers, *rows]) for i in range(len(headers))

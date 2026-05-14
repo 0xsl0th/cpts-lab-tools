@@ -23,6 +23,7 @@ class Workflow:
     troubleshooting: tuple[tuple[str, str, str], ...]
     report_note: str
     related: tuple[str, ...] = ()
+    category: str = "service-enum"
 
 
 _WORKFLOWS: dict[str, Workflow] = {
@@ -701,6 +702,255 @@ _WORKFLOWS: dict[str, Workflow] = {
         ),
         report_note="SNMP service on [TARGET_IP] accepts a default community string over [v1/v2c]. Recommend removing default community strings, migrating to SNMPv3 with auth+priv, and restricting source IPs.",
     ),
+    "linux-privesc": Workflow(
+        service_id="linux-privesc",
+        display_name="Linux Privesc",
+        related=("pivoting",),
+        category="post-foothold",
+        title="Linux Privilege Escalation — Post-Foothold Enumeration",
+        priority=50,
+        when_to_use="You have a shell on a Linux lab target. Enumerate systematically before reaching for exploits — most lab privesc is a misconfiguration, not a kernel CVE.",
+        checklist=(
+            "Stabilize the shell — upgrade to a full interactive TTY.",
+            "Identify the current user, groups, and sudo entitlements.",
+            "Enumerate SUID/SGID binaries and file capabilities.",
+            "Review cron jobs, writable scripts, and PATH-hijack opportunities.",
+            "Check internal listening services and credentials left in config files.",
+            "Run an automated enumeration script and triage its highlights.",
+        ),
+        commands=(
+            ("id; sudo -l", "Current context and any explicitly allowed sudo commands."),
+            (
+                "find / -perm -4000 -type f 2>/dev/null",
+                "World-accessible SUID binaries — cross-reference with GTFOBins.",
+            ),
+            (
+                "getcap -r / 2>/dev/null",
+                "Files carrying Linux capabilities such as cap_setuid.",
+            ),
+            (
+                "cat /etc/crontab; ls -la /etc/cron.*",
+                "Scheduled jobs — look for root-run scripts you can write to.",
+            ),
+            (
+                "./linpeas.sh | tee linpeas.txt",
+                "Automated enumeration; triage the high-probability findings first.",
+            ),
+            ("ss -tlnp", "Internal listening services not exposed to the network."),
+        ),
+        expected_output="A clear picture of your privileges: sudo entitlements, exploitable SUID binaries or capabilities, writable root-owned cron scripts, and any reused credentials in config files.",
+        verification=(
+            "Before reporting a vector, reproduce it end-to-end in a scratch directory and capture the `id` output showing `uid=0`.",
+            "Re-run `sudo -l` after any credential discovery — new credentials can unlock new sudo rights.",
+        ),
+        troubleshooting=(
+            (
+                "`sudo -l` prompts for a password you do not have",
+                "No passwordless sudo configured.",
+                "Pivot to SUID / capabilities / cron; revisit once you recover the user's password.",
+            ),
+            (
+                "SUID binary exists but the GTFOBins technique fails",
+                "Binary is a custom wrapper or has been patched.",
+                "Inspect it with `strings` / `ltrace` for what it actually calls; look for relative-path calls you can hijack.",
+            ),
+            (
+                "Automated enumeration output is overwhelming",
+                "Too much noise to act on.",
+                "Focus on the sudo, SUID, capabilities, cron, and credentials sections first; ignore informational findings until those are exhausted.",
+            ),
+        ),
+        report_note="Privilege escalation on [TARGET_IP] was possible via [misconfiguration — SUID binary / sudo rule / writable cron script]. Recommend removing the unnecessary SUID bit, scoping sudo rules to specific commands, correcting cron script permissions, and applying least privilege to service accounts.",
+    ),
+    "windows-privesc": Workflow(
+        service_id="windows-privesc",
+        display_name="Windows Privesc",
+        related=("ad-foothold", "pivoting"),
+        category="post-foothold",
+        title="Windows Privilege Escalation — Post-Foothold Enumeration",
+        priority=51,
+        when_to_use="You have a shell on a Windows lab target. Enumerate privileges, services, and stored credentials before exploiting — token privileges and service misconfigurations cover most lab cases.",
+        checklist=(
+            "Identify the current user, groups, and token privileges.",
+            "Check for exploitable token privileges (SeImpersonate, SeBackup, etc.).",
+            "Enumerate unquoted service paths and weak service permissions.",
+            "Search for credentials in files, the registry, and Credential Manager.",
+            "Review installed software and patch level for known local exploits.",
+            "Run an automated enumeration script and triage its highlights.",
+        ),
+        commands=(
+            (
+                "whoami /all",
+                "User, group memberships, and token privileges in one view.",
+            ),
+            (
+                "whoami /priv",
+                "Privilege list — note SeImpersonatePrivilege and similar escalation-class rights.",
+            ),
+            (
+                "wmic service get name,displayname,pathname,startmode | findstr /i /v \"C:\\Windows\\\\\"",
+                "Service binary paths — look for unquoted paths and writable directories.",
+            ),
+            (
+                "reg query HKLM /f password /t REG_SZ /s",
+                "Plaintext credentials left in the registry.",
+            ),
+            (
+                ".\\winPEASany.exe | Out-File winpeas.txt",
+                "Automated enumeration; triage the highlighted findings.",
+            ),
+            (
+                "cmdkey /list",
+                "Stored credentials potentially usable with `runas /savecred`.",
+            ),
+        ),
+        expected_output="Your token privileges, any unquoted or weak-permission services, and stored credentials — enough to select a single escalation path.",
+        verification=(
+            "Confirm escalation by capturing `whoami` showing `nt authority\\system` (or the target admin) in a freshly spawned process.",
+            "If you used token impersonation, verify the elevated process is stable before pivoting from it.",
+        ),
+        troubleshooting=(
+            (
+                "SeImpersonatePrivilege is present but the technique fails",
+                "OS build is patched against that specific variant.",
+                "Match the technique to the build (e.g. PrintSpoofer vs the Potato family) and confirm a named pipe is reachable.",
+            ),
+            (
+                "Unquoted service path found but you cannot write to the folder",
+                "Directory ACLs block the write.",
+                "Check every folder in the path with `icacls`; only a writable intermediate folder is exploitable.",
+            ),
+            (
+                "Enumeration flags a credential that does not work",
+                "Credential is stale or rotated.",
+                "Try it against other services (SMB / WinRM) with NetExec before discarding — reuse is common in labs.",
+            ),
+        ),
+        report_note="Privilege escalation on [TARGET_HOST] was possible via [token privilege abuse / unquoted service path / stored credentials]. Recommend removing the privilege from the affected account, quoting service binary paths, clearing stored credentials, and enforcing least privilege.",
+    ),
+    "ad-foothold": Workflow(
+        service_id="ad-foothold",
+        display_name="AD Foothold",
+        related=("windows-privesc", "pivoting"),
+        category="post-foothold",
+        title="Active Directory Foothold — First Steps with a Domain Credential",
+        priority=52,
+        when_to_use="You hold any valid domain credential or a shell on a domain-joined host. Map the domain before attacking — the shortest path to Domain Admin is usually an existing misconfiguration, not an exploit.",
+        checklist=(
+            "Validate the credential and identify what it can reach.",
+            "Collect BloodHound data and review paths to high-value targets.",
+            "Enumerate domain users, groups, and the password policy.",
+            "Hunt for Kerberoastable and AS-REP-roastable accounts.",
+            "Check for ACL-based escalation edges (GenericWrite, WriteDACL, etc.).",
+            "Test the recovered credential for reuse across other hosts.",
+        ),
+        commands=(
+            (
+                "nxc smb [TARGET_IP] -u [USER] -p [PASS]",
+                "Validate the credential and see whether it is local admin anywhere.",
+            ),
+            (
+                "bloodhound-python -d [DOMAIN] -u [USER] -p [PASS] -ns [TARGET_IP] -c All",
+                "Collect graph data; import into BloodHound and run shortest-path queries.",
+            ),
+            (
+                "nxc ldap [TARGET_IP] -u [USER] -p [PASS] --users --groups",
+                "Enumerate domain users and group memberships.",
+            ),
+            (
+                "impacket-GetUserSPNs [DOMAIN]/[USER]:[PASS] -dc-ip [TARGET_IP] -request",
+                "Request Kerberoastable service ticket hashes for offline cracking.",
+            ),
+            (
+                "nxc smb [TARGET_IP] -u [USER] -p [PASS] --shares",
+                "Readable/writable shares — a common source of further credentials.",
+            ),
+        ),
+        expected_output="A domain map: who you are, what you can reach, BloodHound paths toward Domain Admin, and any roastable accounts or ACL edges available to abuse.",
+        verification=(
+            "Confirm BloodHound ingested the data — the node count should match the domain size, not be zero.",
+            "Before chasing a BloodHound path, re-verify each edge still exists; lab state can drift between collections.",
+        ),
+        troubleshooting=(
+            (
+                "`bloodhound-python` fails with a clock-skew error",
+                "Host time differs from the DC by more than five minutes.",
+                "Sync time with `sudo ntpdate [TARGET_IP]` or `sudo rdate -n [TARGET_IP]`, then retry.",
+            ),
+            (
+                "Credential validates on the DC but not on member servers",
+                "It is a low-privilege domain user with no local admin rights.",
+                "Use it for enumeration and roasting; look for a path to a more privileged account in BloodHound.",
+            ),
+            (
+                "Kerberoasting returns no SPNs",
+                "No service accounts, or the user cannot read them.",
+                "Pivot to AS-REP roasting (`GetNPUsers`) and ACL-based escalation paths.",
+            ),
+        ),
+        report_note="With a single valid domain credential, [DOMAIN] exposed [Kerberoastable accounts / ACL escalation edges / credential reuse] leading toward Domain Admin. Recommend strong service-account passwords, removing dangerous ACLs, and enforcing unique local administrator passwords (LAPS).",
+    ),
+    "pivoting": Workflow(
+        service_id="pivoting",
+        display_name="Pivoting",
+        related=("linux-privesc", "windows-privesc"),
+        category="lateral-movement",
+        title="Pivoting — Tunneling & Internal Network Access",
+        priority=60,
+        when_to_use="You have a foothold on a host that can reach an internal segment you cannot. Use the foothold to route traffic into that segment for authorized lab testing only.",
+        checklist=(
+            "Map what the foothold host can reach — interfaces, routes, ARP neighbours.",
+            "Identify internal hosts and services not exposed externally.",
+            "Establish a tunnel or port forward back to your attack box.",
+            "Confirm tooling works through the tunnel before deep enumeration.",
+            "Document the pivot path for the report.",
+        ),
+        commands=(
+            (
+                "ip a; ip route; arp -a",
+                "Local interfaces, routes, and recently-seen neighbours on the internal segment.",
+            ),
+            (
+                "ssh -D 1080 [USER]@[TARGET_IP]",
+                "Dynamic SOCKS proxy through the foothold; point proxychains at 127.0.0.1:1080.",
+            ),
+            (
+                "./chisel server -p [LPORT] --reverse   # on the attack box",
+                "Start a chisel server on your attack box for a reverse tunnel.",
+            ),
+            (
+                "./chisel client [LHOST]:[LPORT] R:socks   # on the foothold host",
+                "Connect back from the foothold to expose a SOCKS proxy over the tunnel.",
+            ),
+            (
+                "proxychains nmap -sT -Pn -p 445,3389 [TARGET_IP]",
+                "Run tooling through the proxy against internal lab hosts.",
+            ),
+        ),
+        expected_output="A working tunnel: internal lab hosts reachable from your attack box via proxychains, plus a clear picture of the internal segment's live hosts and services.",
+        verification=(
+            "Confirm the tunnel with a simple `proxychains curl` or `proxychains nmap -sT` against a known internal host before larger scans.",
+            "Remember proxychains needs full TCP connect scans (`-sT -Pn`) — SYN scans do not traverse SOCKS.",
+        ),
+        troubleshooting=(
+            (
+                "proxychains hangs or times out",
+                "Tunnel is down, or the scan type cannot traverse SOCKS.",
+                "Verify the tunnel process is alive; use `-sT -Pn`; lower the timeouts in the proxychains config.",
+            ),
+            (
+                "chisel client cannot reach the attack box",
+                "Egress filtering on the foothold network.",
+                "Try a commonly-allowed port for [LPORT] (443 / 80) and confirm the server is bound and reachable.",
+            ),
+            (
+                "Internal host responds to ping but no ports open through the tunnel",
+                "Host firewall, or the wrong protocol is being scanned.",
+                "Confirm with a known-open service; use TCP connect scans; some hosts block ICMP but allow TCP.",
+            ),
+        ),
+        report_note="The foothold on [TARGET_IP] provided a route into [internal segment], otherwise unreachable from the test network. Recommend network segmentation and egress filtering so a single compromised host cannot bridge security boundaries.",
+    ),
 }
 
 
@@ -720,3 +970,11 @@ def resolve(service_ids: list[str]) -> list[Workflow]:
         if workflow is not None and sid not in seen:
             seen[sid] = workflow
     return sorted(seen.values(), key=lambda w: (w.priority, w.service_id))
+
+
+def by_category(category: str) -> list[Workflow]:
+    """Return all workflows in a category, sorted by priority then ID."""
+    return sorted(
+        (w for w in _WORKFLOWS.values() if w.category == category),
+        key=lambda w: (w.priority, w.service_id),
+    )

@@ -880,6 +880,81 @@ def test_workflow_show_unknown_service_errors() -> None:
     assert "smb" in result.output
 
 
+def test_workflow_list_shows_categories() -> None:
+    result = runner.invoke(app, ["workflow", "list"])
+
+    assert result.exit_code == 0, result.output
+    assert "Category" in result.output
+    assert "service-enum" in result.output
+    assert "post-foothold" in result.output
+    assert "lateral-movement" in result.output
+    # Post-foothold workflows appear.
+    assert "linux-privesc" in result.output
+    assert "windows-privesc" in result.output
+    assert "ad-foothold" in result.output
+    assert "pivoting" in result.output
+
+
+def test_workflow_list_orders_service_enum_before_post_foothold() -> None:
+    result = runner.invoke(app, ["workflow", "list"])
+
+    assert result.exit_code == 0, result.output
+    # service-enum category sorts before post-foothold.
+    assert result.output.index("smb") < result.output.index("linux-privesc")
+    assert result.output.index("linux-privesc") < result.output.index("pivoting")
+
+
+def test_workflow_show_linux_privesc_without_workspace() -> None:
+    result = runner.invoke(app, ["workflow", "show", "linux-privesc"])
+
+    assert result.exit_code == 0, result.output
+    assert "Linux Privilege Escalation" in result.output
+    assert "### Checklist" in result.output
+    assert "sudo -l" in result.output
+
+
+def test_workflow_show_windows_privesc_without_workspace() -> None:
+    result = runner.invoke(app, ["workflow", "show", "windows-privesc"])
+
+    assert result.exit_code == 0, result.output
+    assert "Windows Privilege Escalation" in result.output
+    assert "whoami /all" in result.output
+
+
+def test_workflow_show_ad_foothold_substitutes_domain() -> None:
+    result = runner.invoke(
+        app,
+        ["workflow", "show", "ad-foothold", "--domain", "target.htb"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Active Directory Foothold" in result.output
+    assert "target.htb" in result.output
+    assert "[DOMAIN]" not in result.output
+    # Operator placeholders preserved.
+    assert "[USER]" in result.output
+    assert "[PASS]" in result.output
+
+
+def test_workflow_show_pivoting_without_workspace() -> None:
+    result = runner.invoke(app, ["workflow", "show", "pivoting"])
+
+    assert result.exit_code == 0, result.output
+    assert "Pivoting" in result.output
+    assert "proxychains" in result.output
+    assert "[LHOST]" in result.output
+    assert "[LPORT]" in result.output
+
+
+def test_suggest_next_includes_after_foothold_footer() -> None:
+    result = runner.invoke(app, ["suggest-next", "-i", str(FIXTURE_XML)])
+
+    assert result.exit_code == 0, result.output
+    assert "## After a Foothold" in result.output
+    assert "cpts-tools workflow show linux-privesc" in result.output
+    assert "cpts-tools workflow show pivoting" in result.output
+
+
 def test_finding_list_on_empty_report_returns_placeholder_row(tmp_path: Path) -> None:
     runner.invoke(
         app,
