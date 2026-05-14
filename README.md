@@ -365,8 +365,9 @@ Excerpt of the default `md` output:
 
 Supported service-enum workflows in this release: SMB, HTTP, HTTPS, FTP, SSH,
 DNS, SMTP, LDAP, Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS (15 total), plus
-four post-foothold workflows — `linux-privesc`, `windows-privesc`, `ad-foothold`,
-and `pivoting`. Run `cpts-tools workflow list` for the live registry with
+three post-foothold workflows — `linux-privesc`, `windows-privesc`,
+`ad-foothold` — and one lateral-movement workflow, `pivoting`. Run
+`cpts-tools workflow list` for the live registry with
 categories, priorities, and port mappings. Open ports without a service-enum
 workflow are listed under an **Unmapped Services** section so nothing is
 silently dropped.
