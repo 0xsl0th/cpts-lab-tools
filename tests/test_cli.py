@@ -70,14 +70,111 @@ def test_parse_nmap_handles_no_open_services(tmp_path: Path) -> None:
     assert "No open services found." in result.output
 
 
-def test_make_hosts_prints_hosts_line() -> None:
+def test_make_hosts_positional_prints_hosts_entry_and_shell_command() -> None:
     result = runner.invoke(
         app,
         ["make-hosts", "10.10.10.5", "target.htb", "www.target.htb"],
     )
 
     assert result.exit_code == 0
-    assert result.output == "10.10.10.5\ttarget.htb www.target.htb\n"
+    assert "# Add this to /etc/hosts:" in result.output
+    assert "10.10.10.5 target.htb www.target.htb" in result.output
+    assert "# Or run:" in result.output
+    assert (
+        'echo "10.10.10.5 target.htb www.target.htb" | sudo tee -a /etc/hosts'
+        in result.output
+    )
+
+
+def test_make_hosts_flag_form_works() -> None:
+    result = runner.invoke(
+        app,
+        ["make-hosts", "--ip", "10.129.230.183", "--host", "pov.htb"],
+    )
+
+    assert result.exit_code == 0
+    assert "10.129.230.183 pov.htb" in result.output
+    assert 'echo "10.129.230.183 pov.htb" | sudo tee -a /etc/hosts' in result.output
+
+
+def test_make_hosts_flag_form_with_repeated_aliases() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "make-hosts",
+            "--ip",
+            "10.129.230.183",
+            "--host",
+            "pov.htb",
+            "--aliases",
+            "dev.pov.htb",
+            "--aliases",
+            "DEV.pov.htb",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "10.129.230.183 pov.htb dev.pov.htb DEV.pov.htb" in result.output
+
+
+def test_make_hosts_flag_form_collects_trailing_positional_aliases() -> None:
+    # User's exact desired syntax: a single --aliases consuming one value via flag,
+    # plus trailing positional args picked up as additional hostnames.
+    result = runner.invoke(
+        app,
+        [
+            "make-hosts",
+            "--ip",
+            "10.129.230.183",
+            "--host",
+            "pov.htb",
+            "--aliases",
+            "dev.pov.htb",
+            "Dev.pov.htb",
+            "DEV.pov.htb",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert (
+        "10.129.230.183 pov.htb dev.pov.htb Dev.pov.htb DEV.pov.htb"
+        in result.output
+    )
+
+
+def test_make_hosts_preserves_alias_casing() -> None:
+    result = runner.invoke(
+        app,
+        ["make-hosts", "10.129.230.183", "pov.htb", "Dev.pov.htb", "DEV.pov.htb"],
+    )
+
+    assert result.exit_code == 0
+    assert "Dev.pov.htb" in result.output
+    assert "DEV.pov.htb" in result.output
+
+
+def test_make_hosts_no_args_errors() -> None:
+    result = runner.invoke(app, ["make-hosts"])
+    assert result.exit_code != 0
+    assert "IP and at least one hostname" in result.output
+
+
+def test_make_hosts_only_ip_errors() -> None:
+    result = runner.invoke(app, ["make-hosts", "10.10.10.5"])
+    assert result.exit_code != 0
+    assert "at least one hostname" in result.output
+
+
+def test_make_hosts_flag_form_requires_ip() -> None:
+    result = runner.invoke(app, ["make-hosts", "--host", "pov.htb"])
+    assert result.exit_code != 0
+    assert "--host and --aliases require --ip" in result.output
+
+
+def test_make_hosts_ip_flag_alone_errors_without_hostname() -> None:
+    result = runner.invoke(app, ["make-hosts", "--ip", "10.10.10.5"])
+    assert result.exit_code != 0
+    assert "hostname" in result.output
 
 
 def test_report_init_creates_machine_structure(tmp_path: Path) -> None:

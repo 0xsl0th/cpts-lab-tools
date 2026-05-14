@@ -227,14 +227,76 @@ def parse_nmap(
 
 @app.command("make-hosts")
 def make_hosts(
-    target_ip: Annotated[str, typer.Argument(help="Target lab IP address.")],
-    hostnames: Annotated[
-        list[str],
-        typer.Argument(help="One or more lab hostnames for the target."),
-    ],
+    args: Annotated[
+        list[str] | None,
+        typer.Argument(
+            metavar="[IP] [HOSTNAMES...]",
+            help=(
+                "Positional form: target IP followed by one or more hostnames. "
+                "When --ip is also passed, these positionals are treated as additional "
+                "hostnames (so `--aliases a b c` works naturally)."
+            ),
+        ),
+    ] = None,
+    ip: Annotated[
+        str | None,
+        typer.Option("--ip", help="Target IP address (flag form)."),
+    ] = None,
+    host: Annotated[
+        str | None,
+        typer.Option("--host", help="Primary hostname (flag form)."),
+    ] = None,
+    aliases: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--aliases",
+            help=(
+                "Hostname alias. May be repeated, or followed by additional "
+                "space-separated hostnames as trailing positional arguments."
+            ),
+        ),
+    ] = None,
 ) -> None:
-    """Print an /etc/hosts line for an authorized lab target."""
-    typer.echo(f"{target_ip}\t{' '.join(hostnames)}")
+    """Print the /etc/hosts entry plus the equivalent shell command. Does not modify any file."""
+    positional = list(args or [])
+    extra_aliases = list(aliases or [])
+
+    if ip is not None:
+        target_ip = ip
+        hostnames: list[str] = []
+        if host is not None:
+            hostnames.append(host)
+        hostnames.extend(extra_aliases)
+        hostnames.extend(positional)
+    else:
+        if host is not None or extra_aliases:
+            raise typer.BadParameter(
+                "--host and --aliases require --ip. "
+                "Either pass --ip too, or use the positional form `IP HOSTNAMES...`."
+            )
+        if not positional:
+            raise typer.BadParameter(
+                "Provide an IP and at least one hostname, "
+                "e.g. `make-hosts 10.129.42.42 box1.htb` or `--ip ... --host ...`."
+            )
+        if len(positional) < 2:
+            raise typer.BadParameter(
+                "Positional form needs IP plus at least one hostname."
+            )
+        target_ip = positional[0]
+        hostnames = positional[1:]
+
+    if not hostnames:
+        raise typer.BadParameter(
+            "At least one hostname is required (pass --host or trailing positional)."
+        )
+
+    line = f"{target_ip} {' '.join(hostnames)}"
+    typer.echo("# Add this to /etc/hosts:")
+    typer.echo(line)
+    typer.echo("")
+    typer.echo("# Or run:")
+    typer.echo(f'echo "{line}" | sudo tee -a /etc/hosts')
 
 
 @app.command("report-init")

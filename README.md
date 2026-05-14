@@ -25,8 +25,9 @@ cpts-tools workspace init box1 \
 
 cd box1
 
-# 2. Add the host to /etc/hosts (optional helper).
-cpts-tools make-hosts 10.129.42.42 box1.htb | sudo tee -a /etc/hosts
+# 2. (Optional) Print the /etc/hosts entry and a copy-paste shell command.
+#    Does NOT modify /etc/hosts — you run the printed command yourself.
+cpts-tools make-hosts 10.129.42.42 box1.htb
 
 # 3. Run nmap into the workspace's scans/ folder.
 sudo nmap -sV -sC -p- -oA scans/initial 10.129.42.42
@@ -76,17 +77,41 @@ Host        Names       Port  Proto  Service  Product  Version
 10.10.10.5  target.htb  80    tcp    http     nginx    1.18.0
 ```
 
-### Make an `/etc/hosts` line
+### Make an `/etc/hosts` entry
+
+`make-hosts` is a read-only helper. It prints the line you should add to
+`/etc/hosts` plus a ready-to-paste shell command. It never modifies any file.
+
+Positional form:
 
 ```bash
-cpts-tools make-hosts 10.10.10.5 target.htb www.target.htb
+cpts-tools make-hosts 10.129.230.183 pov.htb dev.pov.htb Dev.pov.htb DEV.pov.htb
 ```
 
 Output:
 
 ```text
-10.10.10.5	target.htb www.target.htb
+# Add this to /etc/hosts:
+10.129.230.183 pov.htb dev.pov.htb Dev.pov.htb DEV.pov.htb
+
+# Or run:
+echo "10.129.230.183 pov.htb dev.pov.htb Dev.pov.htb DEV.pov.htb" | sudo tee -a /etc/hosts
 ```
+
+Flag form (equivalent output):
+
+```bash
+cpts-tools make-hosts \
+  --ip 10.129.230.183 \
+  --host pov.htb \
+  --aliases dev.pov.htb Dev.pov.htb DEV.pov.htb
+```
+
+In the flag form, the first value after `--aliases` is consumed by the flag and
+any further positional arguments are appended as additional aliases — so the
+shell-natural `--aliases a b c` syntax works. Repeating the flag
+(`--aliases a --aliases b`) is also supported. Hostname casing is preserved
+exactly as typed.
 
 ### Manage a lab workspace
 
