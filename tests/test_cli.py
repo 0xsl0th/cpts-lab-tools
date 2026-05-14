@@ -103,3 +103,176 @@ def test_obsidian_note_generates_template() -> None:
     assert "Target IP: 10.10.10.5" in result.output
     assert "Scope: Authorized lab target only" in result.output
     assert "nmap -sV -sC -oA scans/target 10.10.10.5" in result.output
+
+
+FIXTURE_DIR = Path(__file__).parent / "fixtures"
+FIXTURE_XML = FIXTURE_DIR / "sample_nmap.xml"
+FIXTURE_NORMAL = FIXTURE_DIR / "sample_nmap.nmap"
+FIXTURE_GREPABLE = FIXTURE_DIR / "sample_nmap.gnmap"
+
+
+def test_suggest_next_prints_methodology_to_stdout() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--target",
+            "10.10.10.5",
+            "--host",
+            "target.htb",
+            "--domain",
+            "target.htb",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "# Methodology — 10.10.10.5" in result.output
+    assert "## Detected Services" in result.output
+    assert "SMB (139/445)" in result.output
+    assert "RDP (3389)" in result.output
+    assert "SSH (22)" in result.output
+    assert "## Unmapped Services" in result.output
+    assert "9999/tcp" in result.output
+
+
+def test_suggest_next_writes_to_output_file(tmp_path: Path) -> None:
+    out_path = tmp_path / "methodology.md"
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "--input",
+            str(FIXTURE_XML),
+            "--input-format",
+            "xml",
+            "--output-format",
+            "md",
+            "-o",
+            str(out_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert out_path.is_file()
+    content = out_path.read_text(encoding="utf-8")
+    assert "# Methodology — 10.10.10.5" in content
+    assert f"Wrote methodology to {out_path}" in result.output
+
+
+def test_suggest_next_defaults_target_ip_from_scan() -> None:
+    result = runner.invoke(app, ["suggest-next", "-i", str(FIXTURE_XML)])
+
+    assert result.exit_code == 0, result.output
+    assert "# Methodology — 10.10.10.5" in result.output
+
+
+def test_suggest_next_parses_normal_format() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_NORMAL),
+            "--input-format",
+            "normal",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "# Methodology — 10.10.10.5" in result.output
+    assert "SMB (139/445)" in result.output
+    assert "SSH (22)" in result.output
+
+
+def test_suggest_next_parses_grepable_format() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_GREPABLE),
+            "--input-format",
+            "grepable",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "# Methodology — 10.10.10.5" in result.output
+    assert "RDP (3389)" in result.output
+
+
+def test_suggest_next_auto_infers_xml_from_suffix() -> None:
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(FIXTURE_XML), "--input-format", "auto"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "# Methodology — 10.10.10.5" in result.output
+
+
+def test_suggest_next_auto_infers_normal_from_suffix() -> None:
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(FIXTURE_NORMAL), "--input-format", "auto"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "SMB (139/445)" in result.output
+
+
+def test_suggest_next_auto_infers_grepable_from_suffix() -> None:
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(FIXTURE_GREPABLE), "--input-format", "auto"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "RDP (3389)" in result.output
+
+
+def test_suggest_next_auto_probes_oa_basename_with_xml_priority(tmp_path: Path) -> None:
+    (tmp_path / "scan.xml").write_text(FIXTURE_XML.read_text(), encoding="utf-8")
+    (tmp_path / "scan.nmap").write_text(FIXTURE_NORMAL.read_text(), encoding="utf-8")
+    (tmp_path / "scan.gnmap").write_text(FIXTURE_GREPABLE.read_text(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(tmp_path / "scan")],
+    )
+    assert result.exit_code == 0, result.output
+    assert "# Methodology — 10.10.10.5" in result.output
+
+
+def test_suggest_next_auto_falls_back_to_normal_when_only_nmap_exists(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "scan.nmap").write_text(FIXTURE_NORMAL.read_text(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(tmp_path / "scan")],
+    )
+    assert result.exit_code == 0, result.output
+    assert "SMB (139/445)" in result.output
+
+
+def test_suggest_next_auto_falls_back_to_grepable_when_only_gnmap_exists(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "scan.gnmap").write_text(FIXTURE_GREPABLE.read_text(), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(tmp_path / "scan")],
+    )
+    assert result.exit_code == 0, result.output
+    assert "RDP (3389)" in result.output
+
+
+def test_suggest_next_errors_when_no_scan_files_match_basename(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(tmp_path / "missing")],
+    )
+    assert result.exit_code != 0
+    assert "No scan file found" in result.output

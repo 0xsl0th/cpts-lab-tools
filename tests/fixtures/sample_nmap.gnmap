@@ -1,0 +1,4 @@
+# Nmap 7.94SVN scan initiated Thu May 9 14:33:51 2024 as: nmap -sV -sC -p- -oA scans/target 10.10.10.5
+Host: 10.10.10.5 ()	Status: Up
+Host: 10.10.10.5 (target.htb)	Ports: 22/open/tcp//ssh//OpenSSH 8.9p1 Ubuntu 3ubuntu0.1 (Ubuntu Linux; protocol 2.0)/, 80/open/tcp//http//nginx 1.18.0 (Ubuntu)/, 445/open/tcp//microsoft-ds//Samba smbd 4.15.0/, 3389/open/tcp//ms-wbt-server///, 9999/open/tcp//abyss///, 9876/closed/tcp//sd///	Ignored State: closed (65530)
+# Nmap done at Thu May 9 14:34:23 2024 -- 1 IP address (1 host up) scanned in 32.45 seconds

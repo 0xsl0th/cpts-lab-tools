@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" args="nmap -sV -oX target.xml 10.10.10.5" start="0" version="7.94" xmloutputversion="1.05">
+<host starttime="0" endtime="0">
+<address addr="10.10.10.5" addrtype="ipv4"/>
+<hostnames>
+<hostname name="target.htb" type="user"/>
+</hostnames>
+<ports>
+<port protocol="tcp" portid="22">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="ssh" product="OpenSSH" version="8.9p1"/>
+</port>
+<port protocol="tcp" portid="80">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="http" product="nginx" version="1.18.0"/>
+</port>
+<port protocol="tcp" portid="445">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="microsoft-ds" product="Samba" version="4.15.0"/>
+</port>
+<port protocol="tcp" portid="3389">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="ms-wbt-server"/>
+</port>
+<port protocol="tcp" portid="9999">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="abyss"/>
+</port>
+<port protocol="tcp" portid="9876">
+<state state="closed" reason="reset" reason_ttl="0"/>
+<service name="sd"/>
+</port>
+</ports>
+</host>
+</nmaprun>

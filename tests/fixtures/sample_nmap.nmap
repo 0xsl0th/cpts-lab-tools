@@ -1,0 +1,17 @@
+# Nmap 7.94SVN scan initiated Thu May 9 14:33:51 2024 as: nmap -sV -sC -p- -oA scans/target 10.10.10.5
+Nmap scan report for target.htb (10.10.10.5)
+Host is up (0.038s latency).
+Not shown: 65530 closed tcp ports (reset)
+PORT     STATE SERVICE       VERSION
+22/tcp   open  ssh           OpenSSH 8.9p1 Ubuntu 3ubuntu0.1 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey:
+|   3072 ab:cd:ef:01:23:45 (RSA)
+80/tcp   open  http          nginx 1.18.0 (Ubuntu)
+|_http-title: Welcome
+445/tcp  open  microsoft-ds  Samba smbd 4.15.0
+3389/tcp open  ms-wbt-server
+9999/tcp open  abyss
+9876/tcp closed sd
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+# Nmap done at Thu May 9 14:34:23 2024 -- 1 IP address (1 host up) scanned in 32.45 seconds

@@ -1,53 +1,88 @@
+from enum import Enum
 from pathlib import Path
 from typing import Annotated
 from xml.etree import ElementTree
 
 import typer
 
+from .nmap import (
+    parse_nmap_grepable,
+    parse_nmap_normal,
+    parse_nmap_services,
+)
+from .render import TargetContext, render_methodology
+from .services import canonicalize
+from .workflows import resolve as resolve_workflows
+
 app = typer.Typer(
     help="Minimal helpers for authorized HTB/CPTS lab organization and reporting."
 )
 
 
-def _text(value: str | None, default: str = "-") -> str:
-    if value is None or value.strip() == "":
-        return default
-    return value.strip()
+class InputFormat(str, Enum):
+    AUTO = "auto"
+    XML = "xml"
+    NORMAL = "normal"
+    GREPABLE = "grepable"
 
 
-def parse_nmap_services(xml_path: Path) -> list[dict[str, str]]:
-    root = ElementTree.parse(xml_path).getroot()
-    services: list[dict[str, str]] = []
+class OutputFormat(str, Enum):
+    MD = "md"
 
-    for host in root.findall("host"):
-        address = host.find("address")
-        host_ip = address.get("addr", "-") if address is not None else "-"
-        hostname_nodes = host.findall("hostnames/hostname")
-        hostnames = ", ".join(
-            name
-            for node in hostname_nodes
-            if (name := node.get("name"))
+
+_SUFFIX_TO_FORMAT: dict[str, InputFormat] = {
+    ".xml": InputFormat.XML,
+    ".nmap": InputFormat.NORMAL,
+    ".gnmap": InputFormat.GREPABLE,
+}
+
+
+def _resolve_input(path: Path, fmt: InputFormat) -> tuple[Path, InputFormat]:
+    """Resolve an `-i` path + format to a concrete (file, format) pair.
+
+    Supports an `nmap -oA basename` style path that points at a sibling .xml /
+    .nmap / .gnmap file. When format is AUTO, infers from extension or probes
+    the basename in xml → normal → grepable priority.
+    """
+    if fmt is InputFormat.AUTO:
+        if path.is_file():
+            inferred = _SUFFIX_TO_FORMAT.get(path.suffix.lower())
+            if inferred is None:
+                raise typer.BadParameter(
+                    f"Cannot infer input format from suffix '{path.suffix}'. "
+                    "Pass --input-format explicitly (xml, normal, grepable)."
+                )
+            return path, inferred
+
+        probed: list[Path] = []
+        for ext, resolved in (
+            (".xml", InputFormat.XML),
+            (".nmap", InputFormat.NORMAL),
+            (".gnmap", InputFormat.GREPABLE),
+        ):
+            candidate = path.parent / f"{path.name}{ext}"
+            probed.append(candidate)
+            if candidate.is_file():
+                return candidate, resolved
+        attempts = ", ".join(str(c) for c in probed)
+        raise typer.BadParameter(
+            f"No scan file found at '{path}' or as an -oA basename "
+            f"(tried: {attempts})."
         )
 
-        for port in host.findall("ports/port"):
-            state = port.find("state")
-            if state is None or state.get("state") != "open":
-                continue
+    if not path.is_file():
+        raise typer.BadParameter(f"Scan file not found: {path}")
+    return path, fmt
 
-            service = port.find("service")
-            services.append(
-                {
-                    "host": host_ip,
-                    "hostnames": hostnames or "-",
-                    "port": port.get("portid", "-"),
-                    "proto": port.get("protocol", "-"),
-                    "service": _text(service.get("name") if service is not None else None),
-                    "product": _text(service.get("product") if service is not None else None),
-                    "version": _text(service.get("version") if service is not None else None),
-                }
-            )
 
-    return services
+def _parse_scan(path: Path, fmt: InputFormat) -> list[dict[str, str]]:
+    if fmt is InputFormat.XML:
+        return parse_nmap_services(path)
+    if fmt is InputFormat.NORMAL:
+        return parse_nmap_normal(path)
+    if fmt is InputFormat.GREPABLE:
+        return parse_nmap_grepable(path)
+    raise typer.BadParameter(f"Unsupported input format: {fmt.value}")
 
 
 def format_services(services: list[dict[str, str]]) -> str:
@@ -177,6 +212,114 @@ def obsidian_note(
         "## Evidence\n\n"
         "## Lessons Learned\n"
     )
+
+
+@app.command("suggest-next")
+def suggest_next(
+    input_file: Annotated[
+        Path,
+        typer.Option(
+            "--input",
+            "-i",
+            file_okay=True,
+            dir_okay=False,
+            help=(
+                "Path to a scan file (.xml / .nmap / .gnmap), or an `nmap -oA` "
+                "basename like `scans/target`."
+            ),
+        ),
+    ],
+    input_format: Annotated[
+        InputFormat,
+        typer.Option(
+            "--input-format",
+            help=(
+                "Scan file format. `auto` infers from extension or probes -oA "
+                "basenames in xml → normal → grepable order."
+            ),
+        ),
+    ] = InputFormat.AUTO,
+    target: Annotated[
+        str | None,
+        typer.Option(
+            "--target",
+            "-t",
+            help="Target IP for [TARGET_IP] placeholders. Defaults to the first host in the scan.",
+        ),
+    ] = None,
+    host: Annotated[
+        str | None,
+        typer.Option("--host", help="Optional hostname for [TARGET_HOST] placeholders."),
+    ] = None,
+    domain: Annotated[
+        str | None,
+        typer.Option("--domain", help="Optional domain for [DOMAIN] placeholders."),
+    ] = None,
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option(
+            "--output-format",
+            help="Output format. Only `md` is supported in this release.",
+        ),
+    ] = OutputFormat.MD,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            file_okay=True,
+            dir_okay=False,
+            writable=True,
+            help="Write the rendered methodology to this path instead of stdout.",
+        ),
+    ] = None,
+) -> None:
+    """Generate service-based methodology guidance from an nmap scan."""
+    if output_format is not OutputFormat.MD:
+        raise typer.BadParameter(
+            f"Unsupported output format: {output_format.value}. Only `md` is implemented."
+        )
+
+    resolved_path, resolved_format = _resolve_input(input_file, input_format)
+
+    try:
+        services = _parse_scan(resolved_path, resolved_format)
+    except ElementTree.ParseError as exc:
+        raise typer.BadParameter(f"Invalid nmap XML: {exc}") from exc
+
+    target_ip = target or (services[0]["host"] if services else None)
+    if not target_ip or target_ip == "-":
+        raise typer.BadParameter(
+            "Could not determine target IP from the scan — pass --target/-t explicitly."
+        )
+
+    detected: list[dict[str, str]] = []
+    unmapped: list[dict[str, str]] = []
+    canonical_ids: list[str] = []
+
+    for svc in services:
+        sid = canonicalize(svc["service"], svc["port"], svc["proto"])
+        detected.append(svc)
+        if sid:
+            canonical_ids.append(sid)
+        else:
+            unmapped.append(svc)
+
+    workflows = resolve_workflows(canonical_ids)
+    context = TargetContext(
+        target_ip=target_ip,
+        target_host=host,
+        domain=domain,
+        detected=tuple(detected),
+        unmapped=tuple(unmapped),
+    )
+    markdown = render_methodology(context, workflows)
+
+    if output is not None:
+        output.write_text(markdown, encoding="utf-8")
+        typer.echo(f"Wrote methodology to {output}")
+    else:
+        typer.echo(markdown)
 
 
 if __name__ == "__main__":
