@@ -85,26 +85,26 @@ Host        Names       Port  Proto  Service  Product  Version
 Positional form:
 
 ```bash
-cpts-tools make-hosts 10.129.230.183 pov.htb dev.pov.htb Dev.pov.htb DEV.pov.htb
+cpts-tools make-hosts 10.10.10.5 target.htb dev.target.htb Dev.target.htb DEV.target.htb
 ```
 
 Output:
 
 ```text
 # Add this to /etc/hosts:
-10.129.230.183 pov.htb dev.pov.htb Dev.pov.htb DEV.pov.htb
+10.10.10.5 target.htb dev.target.htb Dev.target.htb DEV.target.htb
 
 # Or run:
-echo "10.129.230.183 pov.htb dev.pov.htb Dev.pov.htb DEV.pov.htb" | sudo tee -a /etc/hosts
+echo "10.10.10.5 target.htb dev.target.htb Dev.target.htb DEV.target.htb" | sudo tee -a /etc/hosts
 ```
 
 Flag form (equivalent output):
 
 ```bash
 cpts-tools make-hosts \
-  --ip 10.129.230.183 \
-  --host pov.htb \
-  --aliases dev.pov.htb Dev.pov.htb DEV.pov.htb
+  --ip 10.10.10.5 \
+  --host target.htb \
+  --aliases dev.target.htb Dev.target.htb DEV.target.htb
 ```
 
 In the flag form, the first value after `--aliases` is consumed by the flag and
