@@ -41,7 +41,16 @@ cpts-tools workspace suggest
 #    Work through the per-service checklists; capture screenshots into
 #    screenshots/, recovered files into loot/, credentials into creds/.
 
-# 6. Update report.md with findings as you go. A scaffold is already there.
+# 6. Record findings into report.md as you go. The first call replaces the
+#    placeholder finding; later calls auto-increment the finding number.
+cpts-tools finding add \
+  --title "SMB null session enabled" \
+  --severity high \
+  --service smb \
+  --port 445 \
+  --evidence screenshots/01-null-session.png
+
+cpts-tools finding list   # quick check of what is in the report so far
 ```
 
 Layout produced by `workspace init`:
@@ -141,6 +150,46 @@ cpts-tools workspace suggest ~/labs/target --output-format md --force
 
 Re-running refuses to overwrite the previous methodology unless `--force` is
 passed; unrelated files in the workspace are never touched.
+
+### Record findings into the report
+
+`finding add` appends a structured finding block to `report.md` inside the
+workspace. The first call replaces the placeholder `### Finding 1 — _Title_`
+left there by `workspace init`; subsequent calls auto-increment the finding
+number after the highest existing one.
+
+```bash
+cpts-tools finding add \
+  --title "SMB null session enabled" \
+  --severity high \
+  --service smb \
+  --port 445 \
+  --evidence screenshots/01-shares.png \
+  --evidence loot/null-session-listing.txt
+```
+
+What `finding add` does:
+
+- Reads `.cpts-tools.json` and pre-fills `Affected:` with the workspace's
+  target IP and hostname.
+- If `--service` matches a known workflow (`smb`, `http`, ...), seeds the
+  `Description:` from the workflow's report-note (with `[TARGET_IP]` /
+  `[TARGET_HOST]` / `[DOMAIN]` substituted) and adds a
+  `**Methodology:** see [[notes/methodology/services/<service>]]` cross-link.
+- `--description` overrides the workflow seed when you want custom text.
+- Each `--evidence PATH` adds a bullet under `Evidence:`. Repeat the flag for
+  multiple files (`--evidence a.png --evidence b.png`).
+- Severity is restricted to `critical | high | medium | low | info`.
+
+`finding list` prints the current findings as a one-line-per-finding table —
+handy for sanity-checking what is captured so far without opening the file:
+
+```text
+#  Severity  Title                        Service:Port
+-  --------  ---------------------------  ------------
+1  High      SMB null session enabled     smb:445
+2  Medium    HTTP debug endpoint exposed  http:80
+```
 
 ### Initialize a report folder (legacy)
 

@@ -10,6 +10,12 @@ from .nmap import (
     parse_nmap_normal,
     parse_nmap_services,
 )
+from .findings import (
+    Severity,
+    add_finding,
+    format_findings_table,
+    list_findings,
+)
 from .render import TargetContext, render_methodology, render_obsidian_vault
 from .services import canonicalize
 from .workflows import resolve as resolve_workflows
@@ -25,7 +31,11 @@ app = typer.Typer(
 workspace_app = typer.Typer(
     help="Manage lab workspaces (folders, metadata, scan-driven methodology)."
 )
+finding_app = typer.Typer(
+    help="Record and list engagement findings inside a workspace's report.md."
+)
 app.add_typer(workspace_app, name="workspace")
+app.add_typer(finding_app, name="finding")
 
 
 class InputFormat(str, Enum):
@@ -566,6 +576,95 @@ def workspace_suggest(
         output=output_path,
         force=force,
     )
+
+
+@finding_app.command("add")
+def finding_add(
+    title: Annotated[
+        str,
+        typer.Option("--title", help="Short finding title."),
+    ],
+    severity: Annotated[
+        Severity,
+        typer.Option(
+            "--severity",
+            case_sensitive=False,
+            help="Severity classification.",
+        ),
+    ],
+    service: Annotated[
+        str | None,
+        typer.Option(
+            "--service",
+            help=(
+                "Canonical service ID (e.g. smb, http). If it matches a workflow, "
+                "the workflow report-note seeds the Description and a Methodology "
+                "wikilink is added."
+            ),
+        ),
+    ] = None,
+    port: Annotated[
+        str | None,
+        typer.Option("--port", help="Affected port."),
+    ] = None,
+    description: Annotated[
+        str | None,
+        typer.Option(
+            "--description",
+            help="Description text. Overrides the workflow report-note seed.",
+        ),
+    ] = None,
+    evidence: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--evidence",
+            help=(
+                "Path to evidence (screenshot, dump, etc). Repeat the flag to "
+                "attach multiple files: `--evidence a.png --evidence b.png`."
+            ),
+        ),
+    ] = None,
+    workspace: Annotated[
+        Path,
+        typer.Argument(help="Workspace path (defaults to the current directory)."),
+    ] = Path("."),
+) -> None:
+    """Append a structured finding to the workspace report.md."""
+    try:
+        number = add_finding(
+            workspace,
+            title=title,
+            severity=severity,
+            service=service,
+            port=port,
+            description=description,
+            evidence=evidence,
+        )
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    typer.echo(
+        f"Recorded Finding {number} — {title} ({severity.display}) "
+        f"in {workspace / 'report.md'}"
+    )
+
+
+@finding_app.command("list")
+def finding_list(
+    workspace: Annotated[
+        Path,
+        typer.Argument(help="Workspace path (defaults to the current directory)."),
+    ] = Path("."),
+) -> None:
+    """Print the findings currently recorded in the workspace report.md."""
+    try:
+        findings = list_findings(workspace)
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    typer.echo(format_findings_table(findings))
 
 
 if __name__ == "__main__":

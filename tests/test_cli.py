@@ -642,6 +642,183 @@ def test_workspace_suggest_errors_when_no_scan(tmp_path: Path) -> None:
     assert "No scan file" in result.output
 
 
+def test_finding_add_records_in_report(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        [
+            "workspace",
+            "init",
+            "target",
+            "--ip",
+            "10.10.10.5",
+            "--host",
+            "target.htb",
+            "-o",
+            str(tmp_path),
+        ],
+    )
+    workspace = tmp_path / "target"
+
+    result = runner.invoke(
+        app,
+        [
+            "finding",
+            "add",
+            "--title",
+            "SMB null session enabled",
+            "--severity",
+            "high",
+            "--service",
+            "smb",
+            "--port",
+            "445",
+            "--evidence",
+            "screenshots/shares.png",
+            str(workspace),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Recorded Finding 1" in result.output
+    report = (workspace / "report.md").read_text(encoding="utf-8")
+    assert "### Finding 1 — SMB null session enabled" in report
+    assert "**Severity:** High" in report
+    assert "`screenshots/shares.png`" in report
+    assert "[[notes/methodology/services/smb]]" in report
+
+
+def test_finding_add_supports_multiple_evidence_paths(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+
+    result = runner.invoke(
+        app,
+        [
+            "finding",
+            "add",
+            "--title",
+            "Multi-evidence",
+            "--severity",
+            "medium",
+            "--evidence",
+            "screenshots/a.png",
+            "--evidence",
+            "screenshots/b.png",
+            str(workspace),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    report = (workspace / "report.md").read_text(encoding="utf-8")
+    assert "`screenshots/a.png`" in report
+    assert "`screenshots/b.png`" in report
+
+
+def test_finding_add_increments_numbering(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+
+    runner.invoke(
+        app,
+        ["finding", "add", "--title", "First", "--severity", "high", str(workspace)],
+    )
+    second = runner.invoke(
+        app,
+        ["finding", "add", "--title", "Second", "--severity", "low", str(workspace)],
+    )
+
+    assert second.exit_code == 0, second.output
+    assert "Recorded Finding 2" in second.output
+
+
+def test_finding_add_errors_outside_workspace(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "finding",
+            "add",
+            "--title",
+            "X",
+            "--severity",
+            "high",
+            str(tmp_path),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "workspace init" in result.output
+
+
+def test_finding_add_rejects_invalid_severity(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    result = runner.invoke(
+        app,
+        [
+            "finding",
+            "add",
+            "--title",
+            "X",
+            "--severity",
+            "catastrophic",
+            str(workspace),
+        ],
+    )
+    assert result.exit_code != 0
+
+
+def test_finding_list_shows_recorded_findings(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    runner.invoke(
+        app,
+        [
+            "finding",
+            "add",
+            "--title",
+            "SMB null session enabled",
+            "--severity",
+            "high",
+            "--service",
+            "smb",
+            "--port",
+            "445",
+            str(workspace),
+        ],
+    )
+
+    result = runner.invoke(app, ["finding", "list", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "SMB null session enabled" in result.output
+    assert "High" in result.output
+    assert "smb:445" in result.output
+
+
+def test_finding_list_on_empty_report_returns_placeholder_row(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+
+    result = runner.invoke(app, ["finding", "list", str(workspace)])
+    assert result.exit_code == 0, result.output
+    # Fresh scaffold has the placeholder row.
+    assert "_Title_" in result.output
+
+
 def test_workspace_suggest_picks_most_recent_scan(tmp_path: Path) -> None:
     runner.invoke(
         app,
