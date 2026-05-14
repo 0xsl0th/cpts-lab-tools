@@ -27,7 +27,3 @@ outputs/
 evidence/
 *.log
 .env
-
-# Hidden from GitHub (kept locally only)
-.gitignore
-CLAUDE.md
