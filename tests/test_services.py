@@ -21,6 +21,11 @@ def test_canonicalize_handles_udp_services() -> None:
     assert canonicalize(None, 53, "udp") == "dns"
 
 
+def test_canonicalize_handles_nfs() -> None:
+    assert canonicalize("nfs", 2049, "tcp") == "nfs"
+    assert canonicalize(None, 2049, "tcp") == "nfs"
+
+
 def test_canonicalize_name_takes_precedence_over_port() -> None:
     assert canonicalize("http", 9999, "tcp") == "http"
 

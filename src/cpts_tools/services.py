@@ -15,6 +15,7 @@ _NAME_MAP: dict[str, set[str]] = {
     "rdp": {"ms-wbt-server", "rdp"},
     "winrm": {"wsman", "winrm"},
     "snmp": {"snmp"},
+    "nfs": {"nfs", "nfs_acl"},
 }
 
 _PORT_MAP: dict[str, set[tuple[int, str]]] = {
@@ -32,6 +33,7 @@ _PORT_MAP: dict[str, set[tuple[int, str]]] = {
     "rdp": {(3389, "tcp")},
     "winrm": {(5985, "tcp"), (5986, "tcp")},
     "snmp": {(161, "udp")},
+    "nfs": {(2049, "tcp")},
 }
 
 _NAME_INDEX: dict[str, str] = {

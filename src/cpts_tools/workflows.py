@@ -608,6 +608,59 @@ _WORKFLOWS: dict[str, Workflow] = {
         ),
         report_note="WinRM service on [TARGET_IP] accepts [USER] credentials and yields code execution as the same context. Recommend restricting WinRM to administrative jump hosts and removing standard users from `Remote Management Users`.",
     ),
+    "nfs": Workflow(
+        service_id="nfs",
+        display_name="NFS",
+        related=("smb",),
+        title="NFS (111/2049) — Exports & UID Spoofing",
+        priority=20,
+        when_to_use="NFS exposed. Default lab exports are often world-readable; uid-spoofing converts a low-priv shell into privileged reads.",
+        checklist=(
+            "List RPC services — NFS depends on rpcbind on 111.",
+            "Enumerate exports via showmount.",
+            "Mount each export and inventory ownership/UIDs.",
+            "If a writable export exists, plan a uid-spoof for privileged file access.",
+        ),
+        commands=(
+            (
+                "nmap -p111,2049 -sV --script=nfs-ls,nfs-showmount,nfs-statfs [TARGET_IP]",
+                "RPC version, exports, and a recursive listing in one pass.",
+            ),
+            ("rpcinfo -p [TARGET_IP]", "Enumerate RPC programs and ports."),
+            ("showmount -e [TARGET_IP]", "List NFS exports the server advertises."),
+            (
+                "sudo mount -t nfs [TARGET_IP]:/[EXPORT] /mnt/nfs -o nolock,vers=3",
+                "Mount an export read-only — lab targets only.",
+            ),
+            (
+                "ls -laR /mnt/nfs",
+                "Inventory ownership; note interesting UIDs for later uid-spoofing.",
+            ),
+        ),
+        expected_output="A list of exports (`/home`, `/srv/public`, `/opt/...`), per-export read/write capability, and file ownership UIDs once mounted.",
+        verification=(
+            "Confirm that `showmount -e` and `nmap nfs-showmount` agree; if one is empty, the other usually has the truth.",
+            "Always `sudo umount /mnt/nfs` before remounting with different options.",
+        ),
+        troubleshooting=(
+            (
+                "`mount.nfs: access denied by server`",
+                "Export limited to specific hosts or `no_root_squash` misconfigured.",
+                "Try `vers=2` or `vers=3`; confirm the export is scoped to your tester IP in the lab.",
+            ),
+            (
+                "`showmount -e` hangs or returns empty",
+                "Server only speaks NFSv4 (no portmapper-style exports list).",
+                "Mount the pseudo-root: `sudo mount -t nfs4 [TARGET_IP]:/ /mnt/nfs -o nolock` and walk from `/`.",
+            ),
+            (
+                "`mount: only root can do that`",
+                "Tester user lacks mount privileges.",
+                "Use `sudo`; in lab VMs sudo is expected for mount operations.",
+            ),
+        ),
+        report_note="NFS service on [TARGET_IP] exposes [exports] readable without authentication. Recommend restricting exports to authorized hosts via `/etc/exports` (`host(rw)` syntax), enabling `root_squash`, and migrating to NFSv4 with Kerberos auth.",
+    ),
     "snmp": Workflow(
         service_id="snmp",
         display_name="SNMP",

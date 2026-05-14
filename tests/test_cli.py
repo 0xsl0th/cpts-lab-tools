@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -423,3 +424,144 @@ def test_suggest_next_obsidian_leaves_unrelated_files_alone(tmp_path: Path) -> N
 
     assert result.exit_code == 0, result.output
     assert sentinel.read_text(encoding="utf-8") == "hand-written notes"
+
+
+def test_workspace_init_creates_layout_and_report(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "workspace",
+            "init",
+            "boxname",
+            "--ip",
+            "10.10.10.5",
+            "--host",
+            "boxname.htb",
+            "--domain",
+            "boxname.htb",
+            "-o",
+            str(tmp_path),
+        ],
+    )
+
+    workspace = tmp_path / "boxname"
+    assert result.exit_code == 0, result.output
+    assert (workspace / "scans").is_dir()
+    assert (workspace / "screenshots").is_dir()
+    assert (workspace / "loot").is_dir()
+    assert (workspace / "notes").is_dir()
+    assert (workspace / "exploits").is_dir()
+    assert (workspace / "creds").is_dir()
+    assert (workspace / ".cpts-tools.json").is_file()
+    report = (workspace / "report.md").read_text(encoding="utf-8")
+    assert "# boxname" in report
+    assert "`10.10.10.5`" in report
+    assert "[[notes/methodology/index]]" in report
+    assert "Initialized workspace" in result.output
+
+
+def test_workspace_init_refuses_existing_without_force(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "boxname", "-o", str(tmp_path)],
+    )
+    second = runner.invoke(
+        app,
+        ["workspace", "init", "boxname", "-o", str(tmp_path)],
+    )
+    assert second.exit_code != 0
+    assert "already initialized" in second.output
+
+
+def test_workspace_suggest_generates_methodology_from_latest_scan(
+    tmp_path: Path,
+) -> None:
+    runner.invoke(
+        app,
+        [
+            "workspace",
+            "init",
+            "boxname",
+            "--ip",
+            "10.10.10.5",
+            "--host",
+            "boxname.htb",
+            "--domain",
+            "boxname.htb",
+            "-o",
+            str(tmp_path),
+        ],
+    )
+    workspace = tmp_path / "boxname"
+    (workspace / "scans" / "initial.xml").write_text(
+        FIXTURE_XML.read_text(), encoding="utf-8"
+    )
+
+    result = runner.invoke(app, ["workspace", "suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    vault = workspace / "notes" / "methodology"
+    assert (vault / "index.md").is_file()
+    assert (vault / "services" / "smb.md").is_file()
+    index = (vault / "index.md").read_text(encoding="utf-8")
+    assert "10.10.10.5" in index
+    assert "boxname.htb" in index
+
+
+def test_workspace_suggest_md_mode_writes_single_file(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "boxname", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "boxname"
+    (workspace / "scans" / "initial.xml").write_text(
+        FIXTURE_XML.read_text(), encoding="utf-8"
+    )
+
+    result = runner.invoke(
+        app,
+        ["workspace", "suggest", str(workspace), "--output-format", "md"],
+    )
+
+    assert result.exit_code == 0, result.output
+    single = workspace / "notes" / "methodology.md"
+    assert single.is_file()
+    assert "# Methodology — 10.10.10.5" in single.read_text(encoding="utf-8")
+
+
+def test_workspace_suggest_errors_when_no_metadata(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["workspace", "suggest", str(tmp_path)])
+    assert result.exit_code != 0
+    assert "workspace init" in result.output
+
+
+def test_workspace_suggest_errors_when_no_scan(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "boxname", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    result = runner.invoke(app, ["workspace", "suggest", str(tmp_path / "boxname")])
+    assert result.exit_code != 0
+    assert "No scan file" in result.output
+
+
+def test_workspace_suggest_picks_most_recent_scan(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "boxname", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "boxname"
+    older = workspace / "scans" / "old.xml"
+    older.write_text(
+        '<nmaprun><host><address addr="10.10.10.5" addrtype="ipv4"/>'
+        '<ports></ports></host></nmaprun>',
+        encoding="utf-8",
+    )
+    time.sleep(0.01)
+    newer = workspace / "scans" / "new.xml"
+    newer.write_text(FIXTURE_XML.read_text(), encoding="utf-8")
+
+    result = runner.invoke(app, ["workspace", "suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert f"Using scan: {newer}" in result.output

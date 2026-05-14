@@ -10,6 +10,56 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
+## Lab session walkthrough
+
+End-to-end flow for a typical HTB/CPTS target. Replace placeholders with the
+real values your lab gives you.
+
+```bash
+# 1. Scaffold a workspace with metadata baked in.
+cpts-tools workspace init box1 \
+  --ip 10.129.42.42 \
+  --host box1.htb \
+  --domain box1.htb \
+  --platform htb
+
+cd box1
+
+# 2. Add the host to /etc/hosts (optional helper).
+cpts-tools make-hosts 10.129.42.42 box1.htb | sudo tee -a /etc/hosts
+
+# 3. Run nmap into the workspace's scans/ folder.
+sudo nmap -sV -sC -p- -oA scans/initial 10.129.42.42
+
+# 4. Generate prioritized, service-by-service methodology as an Obsidian vault.
+#    Metadata from the workspace (target IP / host / domain) is filled in
+#    automatically — no need to repeat the flags.
+cpts-tools workspace suggest
+
+# 5. Open notes/methodology/index.md in Obsidian (or any Markdown editor).
+#    Work through the per-service checklists; capture screenshots into
+#    screenshots/, recovered files into loot/, credentials into creds/.
+
+# 6. Update report.md with findings as you go. A scaffold is already there.
+```
+
+Layout produced by `workspace init`:
+
+```text
+box1/
+├── .cpts-tools.json    # target metadata (ip, host, domain, platform)
+├── report.md           # engagement report scaffold with frontmatter
+├── scans/              # raw nmap output (xml/nmap/gnmap)
+├── screenshots/        # one set per finding
+├── loot/               # recovered files (sanitized before report)
+├── notes/              # working notes + generated methodology vault
+├── exploits/           # adapted exploit code with attribution
+└── creds/              # recovered credentials — gitignored
+```
+
+After `workspace suggest`, `notes/methodology/` contains an Obsidian-friendly
+vault with one MOC (`index.md`) and one note per detected service.
+
 ## Usage
 
 ### Parse nmap XML
@@ -38,7 +88,39 @@ Output:
 10.10.10.5	target.htb www.target.htb
 ```
 
-### Initialize a report folder
+### Manage a lab workspace
+
+`workspace init` scaffolds a target folder with a richer report template and
+persists target metadata so downstream commands inherit it.
+
+```bash
+cpts-tools workspace init box1 \
+  --ip 10.129.42.42 \
+  --host box1.htb \
+  --domain box1.htb \
+  --platform htb \
+  -o ~/labs
+```
+
+`workspace suggest` finds the most recent scan file in `scans/` and generates
+methodology into `notes/methodology/` (Obsidian vault by default) or
+`notes/methodology.md` (with `--output-format md`):
+
+```bash
+# From inside the workspace, no flags needed.
+cpts-tools workspace suggest
+
+# Or explicitly point at a workspace.
+cpts-tools workspace suggest ~/labs/box1 --output-format md --force
+```
+
+Re-running refuses to overwrite the previous methodology unless `--force` is
+passed; unrelated files in the workspace are never touched.
+
+### Initialize a report folder (legacy)
+
+`report-init` is the simpler predecessor of `workspace init` — it creates the
+folder tree only, without metadata or the richer report scaffold.
 
 ```bash
 cpts-tools report-init target --output-dir labs
