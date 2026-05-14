@@ -5,7 +5,6 @@ from typer.testing import CliRunner
 
 from cpts_tools.cli import app
 
-
 runner = CliRunner()
 
 

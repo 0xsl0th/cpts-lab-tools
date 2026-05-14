@@ -9,7 +9,6 @@ from cpts_tools.findings import (
     add_finding,
     format_findings_table,
     list_findings,
-    parse_findings,
     render_finding_block,
 )
 from cpts_tools.workspace import WorkspaceMetadata, init_workspace

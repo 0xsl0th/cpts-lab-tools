@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from .workspace import WorkspaceMetadata, read_metadata
 from .workflows import lookup as lookup_workflow
+from .workspace import WorkspaceMetadata, read_metadata
 
 _HEADING_RE = re.compile(r"^### Finding (\d+) — (.*)$")
 _FINDINGS_SECTION_RE = re.compile(r"^## Findings\s*$")

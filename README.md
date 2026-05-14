@@ -426,9 +426,15 @@ so future releases can add `json` output without breaking the CLI shape.
 
 ## Development
 
-Run syntax checks and tests:
+Install the dev extras (`pytest` + `ruff`), then run syntax checks, lint, and
+tests:
 
 ```bash
+python -m pip install -e ".[dev]"
 python -m compileall src tests
+ruff check .
 python -m pytest
 ```
+
+GitHub Actions runs `ruff check .` and `pytest` on every push and pull request
+across Python 3.11 and 3.13 (see `.github/workflows/tests.yml`).

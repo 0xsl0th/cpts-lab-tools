@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 
-from .workflows import Workflow, by_category, lookup as lookup_workflow
+from .workflows import Workflow, by_category
+from .workflows import lookup as lookup_workflow
 
 _POST_FOOTHOLD_CATEGORIES = ("post-foothold", "lateral-movement")
 
