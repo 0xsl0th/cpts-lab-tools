@@ -7,6 +7,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Pin a wide terminal so Rich/Typer error panels render at a stable width;
+    # the CLI tests assert on un-wrapped error-message substrings.
+    env:
+      COLUMNS: "200"
     strategy:
       fail-fast: false
       matrix:
