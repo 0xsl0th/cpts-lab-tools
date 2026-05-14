@@ -148,6 +148,43 @@ _GREPABLE_PORT_RE = re.compile(
 )
 
 
+_PLACEHOLDER_VALUES = {"-", "", None}
+
+
+def merge_scan_results(
+    scans_in_order: list[tuple[Path, list[dict[str, str]]]],
+) -> list[dict[str, str]]:
+    """Union open-port records from multiple parsed scans.
+
+    Records are keyed by `(host, port, proto)`. When the same key appears in
+    multiple scans, fields are taken from the most recent non-placeholder
+    value — so a later targeted `-sV` scan's product/version wins over an
+    earlier banner-only scan, but a placeholder in the newer scan does not
+    erase real data captured earlier.
+
+    `scans_in_order` must be supplied oldest-first.
+    """
+    merged: dict[tuple[str, str, str], dict[str, str]] = {}
+    for _path, services in scans_in_order:
+        for svc in services:
+            key = (svc.get("host", "-"), svc.get("port", "-"), svc.get("proto", "-"))
+            if key not in merged:
+                merged[key] = dict(svc)
+                continue
+            existing = merged[key]
+            for field_name in ("service", "product", "version", "hostnames"):
+                new_value = svc.get(field_name)
+                if new_value not in _PLACEHOLDER_VALUES:
+                    existing[field_name] = new_value
+
+    def _sort_key(svc: dict[str, str]) -> tuple[str, str, int, str]:
+        port_value = svc.get("port", "-")
+        port_int = int(port_value) if port_value.isdigit() else 10**9
+        return (svc.get("host", "-"), svc.get("proto", "-"), port_int, port_value)
+
+    return sorted(merged.values(), key=_sort_key)
+
+
 def parse_nmap_grepable(path: Path) -> list[dict[str, str]]:
     """Return one dict per open port from an nmap grepable (.gnmap) scan file."""
     services: list[dict[str, str]] = []

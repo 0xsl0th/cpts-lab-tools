@@ -136,8 +136,8 @@ cpts-tools workspace init target \
   -o ~/labs
 ```
 
-`workspace suggest` finds the most recent scan file in `scans/` and generates
-methodology into `notes/methodology/` (Obsidian vault by default) or
+`workspace suggest` merges every scan file in `scans/` (oldest → newest) and
+generates methodology into `notes/methodology/` (Obsidian vault by default) or
 `notes/methodology.md` (with `--output-format md`):
 
 ```bash
@@ -147,6 +147,19 @@ cpts-tools workspace suggest
 # Or explicitly point at a workspace.
 cpts-tools workspace suggest ~/labs/target --output-format md --force
 ```
+
+Multi-scan behavior:
+
+- A typical engagement runs a TCP full scan, a UDP top-N scan, and a targeted
+  `-sV -sC` rescan. Drop all three into `scans/`; methodology generation will
+  union open ports across them and merge service metadata.
+- Records are keyed by `(host, port, proto)`. When the same port appears in
+  more than one scan, the **most recent non-placeholder value wins** for
+  service name, product, and version — so a later `-sV` overrides an earlier
+  banner-only scan, but an unscanned re-discovery cannot erase real data
+  captured earlier.
+- Pass `--latest` to revert to single-scan mode (most-recently-modified file
+  only). Useful if older scans in `scans/` are stale or experimental.
 
 Re-running refuses to overwrite the previous methodology unless `--force` is
 passed; unrelated files in the workspace are never touched.

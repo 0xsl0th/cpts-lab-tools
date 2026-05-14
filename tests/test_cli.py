@@ -819,7 +819,7 @@ def test_finding_list_on_empty_report_returns_placeholder_row(tmp_path: Path) ->
     assert "_Title_" in result.output
 
 
-def test_workspace_suggest_picks_most_recent_scan(tmp_path: Path) -> None:
+def test_workspace_suggest_latest_picks_only_most_recent_scan(tmp_path: Path) -> None:
     runner.invoke(
         app,
         ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
@@ -835,7 +835,77 @@ def test_workspace_suggest_picks_most_recent_scan(tmp_path: Path) -> None:
     newer = workspace / "scans" / "new.xml"
     newer.write_text(FIXTURE_XML.read_text(), encoding="utf-8")
 
-    result = runner.invoke(app, ["workspace", "suggest", str(workspace)])
+    result = runner.invoke(app, ["workspace", "suggest", str(workspace), "--latest"])
 
     assert result.exit_code == 0, result.output
     assert f"Using scan: {newer}" in result.output
+    # Older empty scan ignored when --latest is set.
+    assert str(older) not in result.output
+
+
+def test_workspace_suggest_merges_all_scans_by_default(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    tcp = workspace / "scans" / "tcp.xml"
+    tcp.write_text(
+        '<nmaprun>'
+        '<host><address addr="10.10.10.5" addrtype="ipv4"/>'
+        '<hostnames><hostname name="target.htb" type="user"/></hostnames>'
+        '<ports>'
+        '<port protocol="tcp" portid="80">'
+        '<state state="open"/><service name="http" product="nginx"/>'
+        '</port>'
+        '</ports></host></nmaprun>',
+        encoding="utf-8",
+    )
+    time.sleep(0.01)
+    udp = workspace / "scans" / "udp.xml"
+    udp.write_text(
+        '<nmaprun>'
+        '<host><address addr="10.10.10.5" addrtype="ipv4"/>'
+        '<ports>'
+        '<port protocol="udp" portid="53">'
+        '<state state="open"/><service name="domain"/>'
+        '</port>'
+        '</ports></host></nmaprun>',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["workspace", "suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "Merging 2 scans" in result.output
+    assert str(tcp) in result.output
+    assert str(udp) in result.output
+
+    index = (workspace / "notes" / "methodology" / "index.md").read_text(
+        encoding="utf-8"
+    )
+    # Both ports appear in the unified detected-services table.
+    assert "| 80 | tcp |" in index
+    assert "| 53 | udp |" in index
+    # Workflows for both http and dns are picked up (wikilinks in the MOC).
+    assert "[[services/http|HTTP]]" in index
+    assert "[[services/dns|DNS]]" in index
+    # And each has its own per-service note in the vault.
+    assert (workspace / "notes" / "methodology" / "services" / "http.md").is_file()
+    assert (workspace / "notes" / "methodology" / "services" / "dns.md").is_file()
+
+
+def test_workspace_suggest_single_scan_says_using_scan(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    only = workspace / "scans" / "only.xml"
+    only.write_text(FIXTURE_XML.read_text(), encoding="utf-8")
+
+    result = runner.invoke(app, ["workspace", "suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert f"Using scan: {only}" in result.output
+    assert "Merging" not in result.output

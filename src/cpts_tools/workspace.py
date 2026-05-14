@@ -206,3 +206,15 @@ def find_latest_scan(scans_dir: Path) -> Path | None:
     if not candidates:
         return None
     return max(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def find_all_scans(scans_dir: Path) -> list[Path]:
+    """Return every scan file (.xml/.nmap/.gnmap) in scans_dir, ordered oldest-first by mtime."""
+    if not scans_dir.is_dir():
+        return []
+    candidates = [
+        path
+        for path in scans_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in SCAN_EXTENSIONS
+    ]
+    return sorted(candidates, key=lambda p: p.stat().st_mtime)

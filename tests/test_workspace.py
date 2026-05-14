@@ -154,3 +154,45 @@ def test_find_latest_scan_ignores_non_scan_extensions(tmp_path: Path) -> None:
     scan = scans / "real.xml"
     scan.write_text("<nmaprun/>", encoding="utf-8")
     assert find_latest_scan(scans) == scan
+
+
+def test_find_all_scans_returns_empty_when_missing(tmp_path: Path) -> None:
+    from cpts_tools.workspace import find_all_scans
+
+    assert find_all_scans(tmp_path / "scans") == []
+
+
+def test_find_all_scans_returns_empty_when_directory_empty(tmp_path: Path) -> None:
+    from cpts_tools.workspace import find_all_scans
+
+    (tmp_path / "scans").mkdir()
+    assert find_all_scans(tmp_path / "scans") == []
+
+
+def test_find_all_scans_orders_oldest_first(tmp_path: Path) -> None:
+    from cpts_tools.workspace import find_all_scans
+
+    scans = tmp_path / "scans"
+    scans.mkdir()
+    first = scans / "first.xml"
+    first.write_text("<nmaprun/>", encoding="utf-8")
+    time.sleep(0.01)
+    middle = scans / "middle.nmap"
+    middle.write_text("Nmap scan report for x\n", encoding="utf-8")
+    time.sleep(0.01)
+    last = scans / "last.gnmap"
+    last.write_text("# nmap done\n", encoding="utf-8")
+
+    assert find_all_scans(scans) == [first, middle, last]
+
+
+def test_find_all_scans_excludes_non_scan_files(tmp_path: Path) -> None:
+    from cpts_tools.workspace import find_all_scans
+
+    scans = tmp_path / "scans"
+    scans.mkdir()
+    (scans / "notes.txt").write_text("x", encoding="utf-8")
+    (scans / "loot.tar.gz").write_text("x", encoding="utf-8")
+    real = scans / "real.xml"
+    real.write_text("<nmaprun/>", encoding="utf-8")
+    assert find_all_scans(scans) == [real]

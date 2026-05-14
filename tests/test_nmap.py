@@ -1,10 +1,25 @@
 from pathlib import Path
 
 from cpts_tools.nmap import (
+    merge_scan_results,
     parse_nmap_grepable,
     parse_nmap_normal,
     parse_nmap_services,
 )
+
+
+def _svc(port: str, proto: str = "tcp", *, host: str = "10.10.10.5",
+         hostnames: str = "-", service: str = "-", product: str = "-",
+         version: str = "-") -> dict[str, str]:
+    return {
+        "host": host,
+        "hostnames": hostnames,
+        "port": port,
+        "proto": proto,
+        "service": service,
+        "product": product,
+        "version": version,
+    }
 
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -137,3 +152,61 @@ def test_grepable_and_normal_agree_with_xml_on_open_ports() -> None:
     nmap_ports = _ports(parse_nmap_normal(NORMAL_FIXTURE))
     gnmap_ports = _ports(parse_nmap_grepable(GREPABLE_FIXTURE))
     assert xml_ports == nmap_ports == gnmap_ports
+
+
+def test_merge_scan_results_handles_empty_input() -> None:
+    assert merge_scan_results([]) == []
+
+
+def test_merge_scan_results_handles_single_scan() -> None:
+    single = [_svc("80", "tcp", service="http")]
+    merged = merge_scan_results([(Path("only.xml"), single)])
+    assert merged == single
+
+
+def test_merge_scan_results_unions_distinct_ports() -> None:
+    tcp = [_svc("80", "tcp", service="http")]
+    udp = [_svc("53", "udp", service="domain")]
+    merged = merge_scan_results(
+        [(Path("tcp.xml"), tcp), (Path("udp.xml"), udp)]
+    )
+    keys = {(s["port"], s["proto"]) for s in merged}
+    assert keys == {("80", "tcp"), ("53", "udp")}
+
+
+def test_merge_scan_results_newer_metadata_overrides_older() -> None:
+    older = [_svc("445", service="microsoft-ds")]
+    newer = [_svc("445", service="microsoft-ds", product="Samba", version="4.15.0")]
+    merged = merge_scan_results(
+        [(Path("older.xml"), older), (Path("newer.xml"), newer)]
+    )
+    assert len(merged) == 1
+    assert merged[0]["product"] == "Samba"
+    assert merged[0]["version"] == "4.15.0"
+
+
+def test_merge_scan_results_placeholder_does_not_overwrite_real_data() -> None:
+    older = [_svc("445", service="microsoft-ds", product="Samba", version="4.15.0")]
+    newer = [_svc("445", service="microsoft-ds")]  # placeholders for product/version
+    merged = merge_scan_results(
+        [(Path("older.xml"), older), (Path("newer.xml"), newer)]
+    )
+    assert merged[0]["product"] == "Samba"
+    assert merged[0]["version"] == "4.15.0"
+
+
+def test_merge_scan_results_sorts_by_host_proto_port() -> None:
+    scans = [
+        _svc("80", "tcp"),
+        _svc("3389", "tcp"),
+        _svc("22", "tcp"),
+        _svc("53", "udp"),
+    ]
+    merged = merge_scan_results([(Path("a.xml"), scans)])
+    ports_in_order = [(s["port"], s["proto"]) for s in merged]
+    assert ports_in_order == [
+        ("22", "tcp"),
+        ("80", "tcp"),
+        ("3389", "tcp"),
+        ("53", "udp"),
+    ]

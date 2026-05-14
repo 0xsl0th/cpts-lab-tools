@@ -5,21 +5,23 @@ from xml.etree import ElementTree
 
 import typer
 
-from .nmap import (
-    parse_nmap_grepable,
-    parse_nmap_normal,
-    parse_nmap_services,
-)
 from .findings import (
     Severity,
     add_finding,
     format_findings_table,
     list_findings,
 )
+from .nmap import (
+    merge_scan_results,
+    parse_nmap_grepable,
+    parse_nmap_normal,
+    parse_nmap_services,
+)
 from .render import TargetContext, render_methodology, render_obsidian_vault
 from .services import canonicalize
 from .workflows import resolve as resolve_workflows
 from .workspace import (
+    find_all_scans,
     find_latest_scan,
     init_workspace,
     read_metadata,
@@ -105,10 +107,9 @@ def _parse_scan(path: Path, fmt: InputFormat) -> list[dict[str, str]]:
     raise typer.BadParameter(f"Unsupported input format: {fmt.value}")
 
 
-def _run_suggest(
+def _render_suggest_from_services(
+    services: list[dict[str, str]],
     *,
-    input_file: Path,
-    input_format: InputFormat,
     target: str | None,
     host: str | None,
     domain: str | None,
@@ -116,22 +117,11 @@ def _run_suggest(
     output: Path | None,
     force: bool,
 ) -> None:
-    """Shared body for `suggest-next` and `workspace suggest`.
-
-    Resolves the scan file + format, parses services, canonicalizes them to workflow
-    IDs, renders Markdown or an Obsidian vault, and writes to disk or stdout.
-    """
+    """Render+write methodology from pre-parsed services. Single source of truth."""
     if output_format is OutputFormat.OBSIDIAN and output is None:
         raise typer.BadParameter(
             "--output-format obsidian requires -o / --output pointing to a vault directory."
         )
-
-    resolved_path, resolved_format = _resolve_input(input_file, input_format)
-
-    try:
-        services = _parse_scan(resolved_path, resolved_format)
-    except ElementTree.ParseError as exc:
-        raise typer.BadParameter(f"Invalid nmap XML: {exc}") from exc
 
     target_ip = target or (services[0]["host"] if services else None)
     if not target_ip or target_ip == "-":
@@ -184,6 +174,34 @@ def _run_suggest(
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_text(content, encoding="utf-8")
     typer.echo(f"Wrote Obsidian vault to {output} ({len(files)} files)")
+
+
+def _run_suggest(
+    *,
+    input_file: Path,
+    input_format: InputFormat,
+    target: str | None,
+    host: str | None,
+    domain: str | None,
+    output_format: OutputFormat,
+    output: Path | None,
+    force: bool,
+) -> None:
+    """Body for `suggest-next` (single-scan entry point)."""
+    resolved_path, resolved_format = _resolve_input(input_file, input_format)
+    try:
+        services = _parse_scan(resolved_path, resolved_format)
+    except ElementTree.ParseError as exc:
+        raise typer.BadParameter(f"Invalid nmap XML: {exc}") from exc
+    _render_suggest_from_services(
+        services,
+        target=target,
+        host=host,
+        domain=domain,
+        output_format=output_format,
+        output=output,
+        force=force,
+    )
 
 
 def format_services(services: list[dict[str, str]]) -> str:
@@ -541,34 +559,81 @@ def workspace_suggest(
             ),
         ),
     ] = OutputFormat.OBSIDIAN,
+    latest: Annotated[
+        bool,
+        typer.Option(
+            "--latest",
+            help=(
+                "Use only the most recent scan in scans/. Default is to merge "
+                "every .xml/.nmap/.gnmap file so multi-scan engagements (TCP + "
+                "UDP + targeted rescan) see the full picture."
+            ),
+        ),
+    ] = False,
     force: Annotated[
         bool,
         typer.Option("--force", help="Overwrite existing methodology output."),
     ] = False,
 ) -> None:
-    """Generate methodology for a workspace using its most recent scan."""
+    """Generate methodology for a workspace from its scans/ folder."""
     try:
         metadata = read_metadata(path)
     except FileNotFoundError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
     scans_dir = path / "scans"
-    scan = find_latest_scan(scans_dir)
-    if scan is None:
+
+    if latest:
+        single = find_latest_scan(scans_dir)
+        if single is None:
+            raise typer.BadParameter(
+                f"No scan file (.xml / .nmap / .gnmap) in {scans_dir}. "
+                "Drop an nmap output there first."
+            )
+        scan_paths: list[Path] = [single]
+    else:
+        scan_paths = find_all_scans(scans_dir)
+        if not scan_paths:
+            raise typer.BadParameter(
+                f"No scan file (.xml / .nmap / .gnmap) in {scans_dir}. "
+                "Drop an nmap output there first."
+            )
+
+    if len(scan_paths) == 1:
+        typer.echo(f"Using scan: {scan_paths[0]}")
+    else:
+        typer.echo(f"Merging {len(scan_paths)} scans (oldest → newest):")
+        for scan_path in scan_paths:
+            typer.echo(f"  {scan_path}")
+
+    parsed_scans: list[tuple[Path, list[dict[str, str]]]] = []
+    for scan_path in scan_paths:
+        fmt = _SUFFIX_TO_FORMAT.get(scan_path.suffix.lower())
+        if fmt is None:
+            typer.echo(f"  (skipping {scan_path.name}: unknown scan suffix)")
+            continue
+        try:
+            parsed_scans.append((scan_path, _parse_scan(scan_path, fmt)))
+        except ElementTree.ParseError as exc:
+            raise typer.BadParameter(f"Invalid nmap XML in {scan_path}: {exc}") from exc
+
+    if not parsed_scans:
         raise typer.BadParameter(
-            f"No scan file (.xml / .nmap / .gnmap) in {scans_dir}. "
-            "Drop an nmap output there first."
+            f"No parseable scan files in {scans_dir}."
         )
+
+    if len(parsed_scans) == 1:
+        services = parsed_scans[0][1]
+    else:
+        services = merge_scan_results(parsed_scans)
 
     if output_format is OutputFormat.OBSIDIAN:
         output_path: Path = path / "notes" / "methodology"
     else:
         output_path = path / "notes" / "methodology.md"
 
-    typer.echo(f"Using scan: {scan}")
-    _run_suggest(
-        input_file=scan,
-        input_format=InputFormat.AUTO,
+    _render_suggest_from_services(
+        services,
         target=metadata.target_ip,
         host=metadata.target_host,
         domain=metadata.domain,
