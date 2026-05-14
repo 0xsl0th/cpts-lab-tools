@@ -529,19 +529,19 @@ def test_workspace_init_creates_layout_and_report(tmp_path: Path) -> None:
         [
             "workspace",
             "init",
-            "boxname",
+            "target",
             "--ip",
             "10.10.10.5",
             "--host",
-            "boxname.htb",
+            "target.htb",
             "--domain",
-            "boxname.htb",
+            "target.htb",
             "-o",
             str(tmp_path),
         ],
     )
 
-    workspace = tmp_path / "boxname"
+    workspace = tmp_path / "target"
     assert result.exit_code == 0, result.output
     assert (workspace / "scans").is_dir()
     assert (workspace / "screenshots").is_dir()
@@ -551,7 +551,7 @@ def test_workspace_init_creates_layout_and_report(tmp_path: Path) -> None:
     assert (workspace / "creds").is_dir()
     assert (workspace / ".cpts-tools.json").is_file()
     report = (workspace / "report.md").read_text(encoding="utf-8")
-    assert "# boxname" in report
+    assert "# target" in report
     assert "`10.10.10.5`" in report
     assert "[[notes/methodology/index]]" in report
     assert "Initialized workspace" in result.output
@@ -560,11 +560,11 @@ def test_workspace_init_creates_layout_and_report(tmp_path: Path) -> None:
 def test_workspace_init_refuses_existing_without_force(tmp_path: Path) -> None:
     runner.invoke(
         app,
-        ["workspace", "init", "boxname", "-o", str(tmp_path)],
+        ["workspace", "init", "target", "-o", str(tmp_path)],
     )
     second = runner.invoke(
         app,
-        ["workspace", "init", "boxname", "-o", str(tmp_path)],
+        ["workspace", "init", "target", "-o", str(tmp_path)],
     )
     assert second.exit_code != 0
     assert "already initialized" in second.output
@@ -578,18 +578,18 @@ def test_workspace_suggest_generates_methodology_from_latest_scan(
         [
             "workspace",
             "init",
-            "boxname",
+            "target",
             "--ip",
             "10.10.10.5",
             "--host",
-            "boxname.htb",
+            "target.htb",
             "--domain",
-            "boxname.htb",
+            "target.htb",
             "-o",
             str(tmp_path),
         ],
     )
-    workspace = tmp_path / "boxname"
+    workspace = tmp_path / "target"
     (workspace / "scans" / "initial.xml").write_text(
         FIXTURE_XML.read_text(), encoding="utf-8"
     )
@@ -602,15 +602,15 @@ def test_workspace_suggest_generates_methodology_from_latest_scan(
     assert (vault / "services" / "smb.md").is_file()
     index = (vault / "index.md").read_text(encoding="utf-8")
     assert "10.10.10.5" in index
-    assert "boxname.htb" in index
+    assert "target.htb" in index
 
 
 def test_workspace_suggest_md_mode_writes_single_file(tmp_path: Path) -> None:
     runner.invoke(
         app,
-        ["workspace", "init", "boxname", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
     )
-    workspace = tmp_path / "boxname"
+    workspace = tmp_path / "target"
     (workspace / "scans" / "initial.xml").write_text(
         FIXTURE_XML.read_text(), encoding="utf-8"
     )
@@ -635,9 +635,9 @@ def test_workspace_suggest_errors_when_no_metadata(tmp_path: Path) -> None:
 def test_workspace_suggest_errors_when_no_scan(tmp_path: Path) -> None:
     runner.invoke(
         app,
-        ["workspace", "init", "boxname", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
     )
-    result = runner.invoke(app, ["workspace", "suggest", str(tmp_path / "boxname")])
+    result = runner.invoke(app, ["workspace", "suggest", str(tmp_path / "target")])
     assert result.exit_code != 0
     assert "No scan file" in result.output
 
@@ -645,9 +645,9 @@ def test_workspace_suggest_errors_when_no_scan(tmp_path: Path) -> None:
 def test_workspace_suggest_picks_most_recent_scan(tmp_path: Path) -> None:
     runner.invoke(
         app,
-        ["workspace", "init", "boxname", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
     )
-    workspace = tmp_path / "boxname"
+    workspace = tmp_path / "target"
     older = workspace / "scans" / "old.xml"
     older.write_text(
         '<nmaprun><host><address addr="10.10.10.5" addrtype="ipv4"/>'

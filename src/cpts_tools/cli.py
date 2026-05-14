@@ -277,7 +277,7 @@ def make_hosts(
         if not positional:
             raise typer.BadParameter(
                 "Provide an IP and at least one hostname, "
-                "e.g. `make-hosts 10.129.42.42 box1.htb` or `--ip ... --host ...`."
+                "e.g. `make-hosts 10.10.10.5 target.htb` or `--ip ... --host ...`."
             )
         if len(positional) < 2:
             raise typer.BadParameter(

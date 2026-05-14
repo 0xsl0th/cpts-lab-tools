@@ -17,20 +17,20 @@ real values your lab gives you.
 
 ```bash
 # 1. Scaffold a workspace with metadata baked in.
-cpts-tools workspace init box1 \
-  --ip 10.129.42.42 \
-  --host box1.htb \
-  --domain box1.htb \
+cpts-tools workspace init target \
+  --ip 10.10.10.5 \
+  --host target.htb \
+  --domain target.htb \
   --platform htb
 
-cd box1
+cd target
 
 # 2. (Optional) Print the /etc/hosts entry and a copy-paste shell command.
 #    Does NOT modify /etc/hosts — you run the printed command yourself.
-cpts-tools make-hosts 10.129.42.42 box1.htb
+cpts-tools make-hosts 10.10.10.5 target.htb
 
 # 3. Run nmap into the workspace's scans/ folder.
-sudo nmap -sV -sC -p- -oA scans/initial 10.129.42.42
+sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
 
 # 4. Generate prioritized, service-by-service methodology as an Obsidian vault.
 #    Metadata from the workspace (target IP / host / domain) is filled in
@@ -47,7 +47,7 @@ cpts-tools workspace suggest
 Layout produced by `workspace init`:
 
 ```text
-box1/
+target/
 ├── .cpts-tools.json    # target metadata (ip, host, domain, platform)
 ├── report.md           # engagement report scaffold with frontmatter
 ├── scans/              # raw nmap output (xml/nmap/gnmap)
@@ -119,10 +119,10 @@ exactly as typed.
 persists target metadata so downstream commands inherit it.
 
 ```bash
-cpts-tools workspace init box1 \
-  --ip 10.129.42.42 \
-  --host box1.htb \
-  --domain box1.htb \
+cpts-tools workspace init target \
+  --ip 10.10.10.5 \
+  --host target.htb \
+  --domain target.htb \
   --platform htb \
   -o ~/labs
 ```
@@ -136,7 +136,7 @@ methodology into `notes/methodology/` (Obsidian vault by default) or
 cpts-tools workspace suggest
 
 # Or explicitly point at a workspace.
-cpts-tools workspace suggest ~/labs/box1 --output-format md --force
+cpts-tools workspace suggest ~/labs/target --output-format md --force
 ```
 
 Re-running refuses to overwrite the previous methodology unless `--force` is
