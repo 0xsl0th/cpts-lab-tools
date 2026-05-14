@@ -276,3 +276,150 @@ def test_suggest_next_errors_when_no_scan_files_match_basename(tmp_path: Path) -
     )
     assert result.exit_code != 0
     assert "No scan file found" in result.output
+
+
+def test_suggest_next_obsidian_writes_vault_tree(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--target",
+            "10.10.10.5",
+            "--host",
+            "target.htb",
+            "--domain",
+            "target.htb",
+            "--output-format",
+            "obsidian",
+            "-o",
+            str(vault),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert (vault / "index.md").is_file()
+    assert (vault / "services" / "smb.md").is_file()
+    assert (vault / "services" / "http.md").is_file()
+    assert (vault / "services" / "rdp.md").is_file()
+    assert (vault / "services" / "ssh.md").is_file()
+    assert (vault / "unmapped.md").is_file()
+    assert f"Wrote Obsidian vault to {vault}" in result.output
+
+    index = (vault / "index.md").read_text(encoding="utf-8")
+    assert "[[services/smb|SMB]]" in index
+    assert "[[unmapped|Unmapped Services]]" in index
+
+    smb_note = (vault / "services" / "smb.md").read_text(encoding="utf-8")
+    assert smb_note.startswith("---\n")
+    assert "# SMB" in smb_note
+    assert "[[services/ldap|LDAP]]" in smb_note
+
+
+def test_suggest_next_obsidian_requires_output_dir() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--output-format",
+            "obsidian",
+        ],
+    )
+    assert result.exit_code != 0
+    assert "requires -o" in result.output
+
+
+def test_suggest_next_obsidian_refuses_to_overwrite_without_force(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    first = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--output-format",
+            "obsidian",
+            "-o",
+            str(vault),
+        ],
+    )
+    assert first.exit_code == 0, first.output
+
+    second = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--output-format",
+            "obsidian",
+            "-o",
+            str(vault),
+        ],
+    )
+    assert second.exit_code != 0
+    assert "already exist" in second.output
+    assert "--force" in second.output
+
+
+def test_suggest_next_obsidian_force_allows_overwrite(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--output-format",
+            "obsidian",
+            "-o",
+            str(vault),
+        ],
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--target",
+            "10.10.10.99",
+            "--output-format",
+            "obsidian",
+            "-o",
+            str(vault),
+            "--force",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    index = (vault / "index.md").read_text(encoding="utf-8")
+    assert "10.10.10.99" in index
+
+
+def test_suggest_next_obsidian_leaves_unrelated_files_alone(tmp_path: Path) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    sentinel = vault / "my-notes.md"
+    sentinel.write_text("hand-written notes", encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--output-format",
+            "obsidian",
+            "-o",
+            str(vault),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert sentinel.read_text(encoding="utf-8") == "hand-written notes"

@@ -38,3 +38,19 @@ def test_priorities_keep_rce_class_ahead_of_info_class() -> None:
     ssh = lookup("ssh")
     assert smb is not None and ssh is not None
     assert smb.priority < ssh.priority
+
+
+def test_every_workflow_has_display_name() -> None:
+    for sid in all_ids():
+        workflow = lookup(sid)
+        assert workflow is not None
+        assert workflow.display_name, f"Workflow {sid} missing display_name"
+
+
+def test_every_related_id_references_a_known_workflow() -> None:
+    known = set(all_ids())
+    for sid in all_ids():
+        workflow = lookup(sid)
+        assert workflow is not None
+        missing = [r for r in workflow.related if r not in known]
+        assert not missing, f"Workflow {sid} references unknown: {missing}"

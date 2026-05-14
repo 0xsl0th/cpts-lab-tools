@@ -12,6 +12,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class Workflow:
     service_id: str
+    display_name: str
     title: str
     priority: int  # lower runs earlier; RCE-class < auth < info
     when_to_use: str
@@ -21,11 +22,14 @@ class Workflow:
     verification: tuple[str, ...]
     troubleshooting: tuple[tuple[str, str, str], ...]
     report_note: str
+    related: tuple[str, ...] = ()
 
 
 _WORKFLOWS: dict[str, Workflow] = {
     "smb": Workflow(
         service_id="smb",
+        display_name="SMB",
+        related=("ldap", "kerberos"),
         title="SMB (139/445) — Share & RPC Enumeration",
         priority=10,
         when_to_use="SMB exposed. Start with null-session enumeration before any credentialed attempt.",
@@ -78,6 +82,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "http": Workflow(
         service_id="http",
+        display_name="HTTP",
+        related=("https",),
         title="HTTP (80/8080/8000) — Web Surface Enumeration",
         priority=15,
         when_to_use="Plain HTTP exposed. Treat each port as a distinct application.",
@@ -127,6 +133,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "https": Workflow(
         service_id="https",
+        display_name="HTTPS",
+        related=("http",),
         title="HTTPS (443/8443) — TLS Web Surface",
         priority=15,
         when_to_use="TLS-wrapped HTTP exposed. Inspect the certificate for hostnames and SANs before brute-forcing.",
@@ -168,6 +176,7 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "ftp": Workflow(
         service_id="ftp",
+        display_name="FTP",
         title="FTP (21) — Anonymous & Credentialed",
         priority=20,
         when_to_use="FTP exposed. Always try anonymous first — it costs nothing and frequently works on lab targets.",
@@ -216,6 +225,7 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "ssh": Workflow(
         service_id="ssh",
+        display_name="SSH",
         title="SSH (22) — Banner, Auth Modes, Key Reuse",
         priority=35,
         when_to_use="SSH exposed. Treat as auth surface — useful for credential reuse, not an exploitation primitive on its own.",
@@ -255,6 +265,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "dns": Workflow(
         service_id="dns",
+        display_name="DNS",
+        related=("ldap", "kerberos"),
         title="DNS (53) — Records, Zone Transfers, Subdomain Discovery",
         priority=30,
         when_to_use="DNS exposed (TCP or UDP). Often gives you the entire AD or web hostname inventory for free.",
@@ -298,6 +310,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "smtp": Workflow(
         service_id="smtp",
+        display_name="SMTP",
+        related=("ldap",),
         title="SMTP (25/465/587) — User Enumeration & Relay",
         priority=30,
         when_to_use="SMTP exposed. Primary value is VRFY/EXPN/RCPT user enumeration for downstream password spraying.",
@@ -337,6 +351,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "ldap": Workflow(
         service_id="ldap",
+        display_name="LDAP",
+        related=("kerberos", "smb"),
         title="LDAP (389/636) — Directory Enumeration",
         priority=20,
         when_to_use="LDAP exposed (very likely an AD DC). Anonymous binds reveal naming context and sometimes the full user list.",
@@ -383,6 +399,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "kerberos": Workflow(
         service_id="kerberos",
+        display_name="Kerberos",
+        related=("ldap", "smb"),
         title="Kerberos (88) — Pre-Auth, ASREP & Kerberoasting Surface",
         priority=15,
         when_to_use="Kerberos exposed — you are almost certainly looking at a domain controller for [DOMAIN].",
@@ -427,6 +445,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "mssql": Workflow(
         service_id="mssql",
+        display_name="MSSQL",
+        related=("smb",),
         title="MSSQL (1433) — Auth, xp_cmdshell, Linked Servers",
         priority=15,
         when_to_use="MSSQL exposed. Always test with default/blank `sa` first and integrated AD creds second.",
@@ -470,6 +490,7 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "mysql": Workflow(
         service_id="mysql",
+        display_name="MySQL",
         title="MySQL/MariaDB (3306) — Auth, FILE Privilege",
         priority=20,
         when_to_use="MySQL/MariaDB exposed. Anonymous and `root:` empty-password often work on legacy lab targets.",
@@ -509,6 +530,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "rdp": Workflow(
         service_id="rdp",
+        display_name="RDP",
+        related=("winrm", "smb"),
         title="RDP (3389) — NLA, Credential Validation, BlueKeep",
         priority=15,
         when_to_use="RDP exposed. Primary value is credential validation and lateral movement once AD creds are recovered.",
@@ -551,6 +574,8 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "winrm": Workflow(
         service_id="winrm",
+        display_name="WinRM",
+        related=("rdp", "smb"),
         title="WinRM (5985/5986) — Remote PowerShell",
         priority=15,
         when_to_use="WinRM exposed. Typically reachable only after recovering valid AD credentials.",
@@ -585,6 +610,7 @@ _WORKFLOWS: dict[str, Workflow] = {
     ),
     "snmp": Workflow(
         service_id="snmp",
+        display_name="SNMP",
         title="SNMP (UDP 161) — Community Strings & MIB Walk",
         priority=25,
         when_to_use="SNMP exposed (UDP). `public` and `private` are still common on lab targets and small appliances.",

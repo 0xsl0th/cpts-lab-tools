@@ -125,8 +125,57 @@ Supported services in this release: SMB, HTTP, HTTPS, FTP, SSH, DNS, SMTP, LDAP,
 Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP. Open ports without a workflow are listed
 under an **Unmapped Services** section so nothing is silently dropped.
 
-`--output-format` currently accepts only `md`; the option is scaffolded so future
-releases can add `json` and `obsidian` output without breaking the CLI shape.
+#### Obsidian vault output
+
+`--output-format obsidian` writes a small Obsidian-friendly vault folder instead of a
+single Markdown file. The directory passed via `-o` is created (and intermediate
+parents) if it does not already exist.
+
+```bash
+cpts-tools suggest-next \
+  -i scans/target \
+  --target 10.129.x.x \
+  --host target.htb \
+  --domain target.htb \
+  --output-format obsidian \
+  -o notes/target
+```
+
+Generated layout:
+
+```text
+notes/target/
+├── index.md          # MOC: frontmatter, scope, detected services, prioritized
+│                     # wikilinks to each service note, optional report draft
+├── services/
+│   ├── smb.md        # frontmatter + Checklist / Commands / Expected output /
+│   ├── http.md       # Verification / Troubleshooting / Report note / Related
+│   ├── rdp.md
+│   └── …             # one per detected & mapped service
+└── unmapped.md       # only present when the scan has open ports without a workflow
+```
+
+- Filenames use the lowercase canonical service ID (`smb.md`, `winrm.md`).
+- Cross-references render as aliased wikilinks: `[[services/smb|SMB]]`,
+  `[[services/winrm|WinRM]]` — paths are stable and machine-friendly, while the
+  alias keeps the rendered text human-friendly.
+- Each note carries YAML frontmatter (`title`, `target`, `service`, `priority`,
+  `status: in-progress`, tags) so Obsidian dataview / search queries work
+  immediately.
+
+By default the command refuses to overwrite existing files in the vault directory.
+Pass `--force` to overwrite, or point `-o` at an empty/new directory. Files in the
+target directory that the tool does not generate are left untouched.
+
+```bash
+# Re-render and overwrite previously generated notes
+cpts-tools suggest-next -i scans/target --output-format obsidian -o notes/target --force
+```
+
+The `md` default behavior (single Markdown file, optional `-o`) is unchanged.
+
+`--output-format` currently accepts `md` and `obsidian`; the option is scaffolded
+so future releases can add `json` output without breaking the CLI shape.
 
 ## Development
 

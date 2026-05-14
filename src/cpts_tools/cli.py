@@ -10,7 +10,7 @@ from .nmap import (
     parse_nmap_normal,
     parse_nmap_services,
 )
-from .render import TargetContext, render_methodology
+from .render import TargetContext, render_methodology, render_obsidian_vault
 from .services import canonicalize
 from .workflows import resolve as resolve_workflows
 
@@ -28,6 +28,7 @@ class InputFormat(str, Enum):
 
 class OutputFormat(str, Enum):
     MD = "md"
+    OBSIDIAN = "obsidian"
 
 
 _SUFFIX_TO_FORMAT: dict[str, InputFormat] = {
@@ -259,7 +260,11 @@ def suggest_next(
         OutputFormat,
         typer.Option(
             "--output-format",
-            help="Output format. Only `md` is supported in this release.",
+            help=(
+                "Output format. `md` writes a single Markdown file; `obsidian` "
+                "writes a vault folder (index, per-service notes, optional "
+                "unmapped note)."
+            ),
         ),
     ] = OutputFormat.MD,
     output: Annotated[
@@ -267,17 +272,28 @@ def suggest_next(
         typer.Option(
             "--output",
             "-o",
-            file_okay=True,
-            dir_okay=False,
-            writable=True,
-            help="Write the rendered methodology to this path instead of stdout.",
+            help=(
+                "For `md`: write the rendered methodology to this file (stdout "
+                "if omitted). For `obsidian`: required, a vault directory to "
+                "populate."
+            ),
         ),
     ] = None,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help=(
+                "Overwrite existing files in the Obsidian vault directory. "
+                "Ignored for `--output-format md`."
+            ),
+        ),
+    ] = False,
 ) -> None:
     """Generate service-based methodology guidance from an nmap scan."""
-    if output_format is not OutputFormat.MD:
+    if output_format is OutputFormat.OBSIDIAN and output is None:
         raise typer.BadParameter(
-            f"Unsupported output format: {output_format.value}. Only `md` is implemented."
+            "--output-format obsidian requires -o / --output pointing to a vault directory."
         )
 
     resolved_path, resolved_format = _resolve_input(input_file, input_format)
@@ -313,13 +329,30 @@ def suggest_next(
         detected=tuple(detected),
         unmapped=tuple(unmapped),
     )
-    markdown = render_methodology(context, workflows)
 
-    if output is not None:
-        output.write_text(markdown, encoding="utf-8")
-        typer.echo(f"Wrote methodology to {output}")
-    else:
-        typer.echo(markdown)
+    if output_format is OutputFormat.MD:
+        markdown = render_methodology(context, workflows)
+        if output is not None:
+            output.write_text(markdown, encoding="utf-8")
+            typer.echo(f"Wrote methodology to {output}")
+        else:
+            typer.echo(markdown)
+        return
+
+    assert output is not None  # guarded above
+    files = render_obsidian_vault(context, workflows)
+    output.mkdir(parents=True, exist_ok=True)
+    existing = [output / rel for rel in files if (output / rel).exists()]
+    if existing and not force:
+        joined = "\n  ".join(str(p) for p in existing)
+        raise typer.BadParameter(
+            "Vault files already exist (pass --force to overwrite):\n  " + joined
+        )
+    for rel, content in files.items():
+        target_path = output / rel
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_text(content, encoding="utf-8")
+    typer.echo(f"Wrote Obsidian vault to {output} ({len(files)} files)")
 
 
 if __name__ == "__main__":
