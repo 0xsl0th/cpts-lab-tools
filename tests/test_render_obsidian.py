@@ -1,5 +1,5 @@
-from cpts_tools.render import TargetContext, render_obsidian_vault
-from cpts_tools.workflows import lookup, resolve
+from reconlab.render import TargetContext, render_obsidian_vault
+from reconlab.workflows import lookup, resolve
 
 
 def _ctx(**overrides):
@@ -140,8 +140,8 @@ def test_index_includes_after_foothold_section() -> None:
     index = vault["index.md"]
 
     assert "## After a Foothold" in index
-    assert "cpts-tools workflow show linux-privesc" in index
-    assert "cpts-tools workflow show pivoting" in index
+    assert "reconlab workflow show linux-privesc" in index
+    assert "reconlab workflow show pivoting" in index
     # No per-service notes are created for post-foothold workflows.
     assert "services/linux-privesc.md" not in vault
     assert "services/pivoting.md" not in vault

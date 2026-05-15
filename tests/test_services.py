@@ -1,4 +1,4 @@
-from cpts_tools.services import canonicalize
+from reconlab.services import canonicalize
 
 
 def test_canonicalize_by_name() -> None:

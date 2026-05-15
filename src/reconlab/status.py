@@ -59,21 +59,21 @@ def _next_step(
 ) -> str:
     """Pick the single most useful next action for the current workspace state."""
     if scan_count == 0:
-        return "Drop an nmap scan into scans/, then run `cpts-tools workspace suggest`."
+        return "Drop an nmap scan into scans/, then run `reconlab workspace suggest`."
     if methodology is None:
-        return "Run `cpts-tools workspace suggest` to generate methodology from scans/."
+        return "Run `reconlab workspace suggest` to generate methodology from scans/."
     if methodology_stale:
         return (
             "scans/ changed since the methodology was generated — re-run "
-            "`cpts-tools workspace suggest --force`."
+            "`reconlab workspace suggest --force`."
         )
     if not findings:
         return (
             "Work through notes/methodology/, and record results with "
-            "`cpts-tools finding add`."
+            "`reconlab finding add`."
         )
     return (
-        "Keep capturing findings with `cpts-tools finding add`; "
+        "Keep capturing findings with `reconlab finding add`; "
         "review report.md before wrap-up."
     )
 

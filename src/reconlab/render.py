@@ -124,7 +124,7 @@ def _after_foothold_lines() -> list[str]:
     ]
     for workflow in followups:
         lines.append(
-            f"- `cpts-tools workflow show {workflow.service_id}` — {workflow.title}"
+            f"- `reconlab workflow show {workflow.service_id}` — {workflow.title}"
         )
     lines.append("")
     return lines

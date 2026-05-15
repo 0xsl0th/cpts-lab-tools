@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from cpts_tools.findings import Severity, add_finding
-from cpts_tools.report import check_report, format_report_check
-from cpts_tools.workspace import init_workspace
+from reconlab.findings import Severity, add_finding
+from reconlab.report import check_report, format_report_check
+from reconlab.workspace import init_workspace
 
 _IMPACT_PLACEHOLDER = "_Business or technical impact._"
 _REMEDIATION_PLACEHOLDER = "_Specific, actionable fix — not generic advice._"

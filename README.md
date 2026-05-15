@@ -1,4 +1,4 @@
-# cpts-lab-tools
+# reconlab
 
 Minimal Python CLI helpers for authorized penetration-testing lab work. The project focuses on lab organization, scan parsing, and reporting workflows. It does not include exploit automation and is not intended for use against real third-party systems.
 
@@ -25,8 +25,8 @@ python -m pip install -e ".[dev]"
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
 | `report-init` / `obsidian-note` | **Deprecated** — superseded by `workspace init` / `workspace suggest`; slated for removal. |
 
-Run `cpts-tools --help` (or `cpts-tools <command> --help`) for full option
-lists, or `cpts-tools --version` to print the installed version.
+Run `reconlab --help` (or `reconlab <command> --help`) for full option
+lists, or `reconlab --version` to print the installed version.
 
 ## Lab session walkthrough
 
@@ -35,7 +35,7 @@ real values your lab gives you.
 
 ```bash
 # 1. Scaffold a workspace with metadata baked in.
-cpts-tools workspace init target \
+reconlab workspace init target \
   --ip 10.10.10.5 \
   --host app.corp.local \
   --domain corp.local \
@@ -45,7 +45,7 @@ cd target
 
 # 2. (Optional) Print the /etc/hosts entry and a copy-paste shell command.
 #    Does NOT modify /etc/hosts — you run the printed command yourself.
-cpts-tools make-hosts 10.10.10.5 app.corp.local
+reconlab make-hosts 10.10.10.5 app.corp.local
 
 # 3. Run nmap into the workspace's scans/ folder.
 sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
@@ -53,7 +53,7 @@ sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
 # 4. Generate prioritized, service-by-service methodology as an Obsidian vault.
 #    Metadata from the workspace (target IP / host / domain) is filled in
 #    automatically — no need to repeat the flags.
-cpts-tools workspace suggest
+reconlab workspace suggest
 
 # 5. Open notes/methodology/index.md in Obsidian (or any Markdown editor).
 #    Work through the per-service checklists; capture screenshots into
@@ -61,21 +61,21 @@ cpts-tools workspace suggest
 
 # 6. Record findings into report.md as you go. The first call replaces the
 #    placeholder finding; later calls auto-increment the finding number.
-cpts-tools finding add \
+reconlab finding add \
   --title "SMB null session enabled" \
   --severity high \
   --service smb \
   --port 445 \
   --evidence screenshots/01-null-session.png
 
-cpts-tools finding list   # quick check of what is in the report so far
+reconlab finding list   # quick check of what is in the report so far
 ```
 
 Layout produced by `workspace init`:
 
 ```text
 target/
-├── .cpts-tools.json    # target metadata (ip, host, domain, platform)
+├── .reconlab.json    # target metadata (ip, host, domain, platform)
 ├── report.md           # engagement report scaffold with frontmatter
 ├── scans/              # raw nmap output (xml/nmap/gnmap)
 ├── screenshots/        # one set per finding
@@ -93,7 +93,7 @@ vault with one MOC (`index.md`) and one note per detected service.
 ### Parse nmap XML
 
 ```bash
-cpts-tools parse-nmap scans/target.xml
+reconlab parse-nmap scans/target.xml
 ```
 
 Example output:
@@ -112,7 +112,7 @@ Host        Names           Port  Proto  Service  Product  Version
 Positional form:
 
 ```bash
-cpts-tools make-hosts 10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
+reconlab make-hosts 10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
 ```
 
 Output:
@@ -128,7 +128,7 @@ echo "10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local" | 
 Flag form (equivalent output):
 
 ```bash
-cpts-tools make-hosts \
+reconlab make-hosts \
   --ip 10.10.10.5 \
   --host app.corp.local \
   --aliases dev.corp.local Dev.corp.local DEV.corp.local
@@ -146,7 +146,7 @@ exactly as typed.
 persists target metadata so downstream commands inherit it.
 
 ```bash
-cpts-tools workspace init target \
+reconlab workspace init target \
   --ip 10.10.10.5 \
   --host app.corp.local \
   --domain corp.local \
@@ -161,10 +161,10 @@ generates methodology into `notes/methodology/` (Obsidian vault by default),
 
 ```bash
 # From inside the workspace, no flags needed.
-cpts-tools workspace suggest
+reconlab workspace suggest
 
 # Or explicitly point at a workspace.
-cpts-tools workspace suggest ~/labs/target --output-format md --force
+reconlab workspace suggest ~/labs/target --output-format md --force
 ```
 
 Multi-scan behavior:
@@ -192,8 +192,8 @@ next step.
 
 ```bash
 # From inside the workspace, or point at one explicitly.
-cpts-tools workspace status
-cpts-tools workspace status ~/labs/target
+reconlab workspace status
+reconlab workspace status ~/labs/target
 ```
 
 ```text
@@ -206,7 +206,7 @@ Path:      /home/op/labs/target
   Methodology  notes/methodology/  — STALE (newer scans present)
   Findings     1 recorded — 1 High
 
-Next: scans/ changed since the methodology was generated — re-run `cpts-tools workspace suggest --force`.
+Next: scans/ changed since the methodology was generated — re-run `reconlab workspace suggest --force`.
 ```
 
 The **Next** line is state-driven: it points at `workspace suggest` when no
@@ -223,8 +223,8 @@ when issues remain, so it works as a pre-handover gate or a CI step.
 
 ```bash
 # From inside the workspace, or point at one explicitly.
-cpts-tools workspace check
-cpts-tools workspace check ~/labs/target
+reconlab workspace check
+reconlab workspace check ~/labs/target
 ```
 
 ```text
@@ -254,7 +254,7 @@ left there by `workspace init`; subsequent calls auto-increment the finding
 number after the highest existing one.
 
 ```bash
-cpts-tools finding add \
+reconlab finding add \
   --title "SMB null session enabled" \
   --severity high \
   --service smb \
@@ -265,7 +265,7 @@ cpts-tools finding add \
 
 What `finding add` does:
 
-- Reads `.cpts-tools.json` and pre-fills `Affected:` with the workspace's
+- Reads `.reconlab.json` and pre-fills `Affected:` with the workspace's
   target IP and hostname.
 - If `--service` matches a known workflow (`smb`, `http`, ...), seeds the
   `Description:` from the workflow's report-note (with `[TARGET_IP]` /
@@ -305,7 +305,7 @@ Post-foothold and lateral-movement workflows have no ports, so a scan never
 auto-selects them — reach them with `workflow show`.
 
 ```bash
-cpts-tools workflow list
+reconlab workflow list
 ```
 
 ```text
@@ -322,11 +322,11 @@ lateral-movement  pivoting         Pivoting         60        -
 
 ```bash
 # Print one workflow (Markdown) to stdout with placeholders intact
-cpts-tools workflow show smb
-cpts-tools workflow show linux-privesc
+reconlab workflow show smb
+reconlab workflow show linux-privesc
 
 # Or substitute target metadata while rendering
-cpts-tools workflow show ad-foothold --domain corp.local
+reconlab workflow show ad-foothold --domain corp.local
 ```
 
 The Markdown is the same per-workflow content that `workspace suggest` and
@@ -338,14 +338,14 @@ so the generated methodology carries you past initial access.
 
 > **Deprecated.** Superseded by `workspace init`; will be removed in a future
 > release. Running it prints a deprecation notice on stderr. Migrate with
-> `cpts-tools workspace init <name>` — you get the same folder tree, plus
+> `reconlab workspace init <name>` — you get the same folder tree, plus
 > persisted metadata and a richer report scaffold.
 
 `report-init` is the simpler predecessor of `workspace init` — it creates the
 folder tree only, without metadata or the richer report scaffold.
 
 ```bash
-cpts-tools report-init target --output-dir labs
+reconlab report-init target --output-dir labs
 ```
 
 Creates:
@@ -372,14 +372,14 @@ vault renderer existed. For new work, prefer `workspace init` + `workspace
 suggest` — the generated vault is richer and stays in sync with scan results.
 
 ```bash
-cpts-tools obsidian-note target --ip 10.10.10.5 > target.md
+reconlab obsidian-note target --ip 10.10.10.5 > target.md
 ```
 
 ### Suggest the next steps from an nmap scan
 
 `suggest-next` is the underlying methodology generator. For the typical case
 (one workspace, drop a scan into `scans/`, get a vault back) prefer
-`cpts-tools workspace suggest` — it picks up the latest scan and the workspace
+`reconlab workspace suggest` — it picks up the latest scan and the workspace
 metadata automatically. Reach for `suggest-next` directly when you want to
 point at an arbitrary scan file or override the target metadata.
 
@@ -400,7 +400,7 @@ Supported input formats:
 ```bash
 # Auto-detect: scans/target resolves to scans/target.xml if present,
 # otherwise scans/target.nmap, otherwise scans/target.gnmap.
-cpts-tools suggest-next \
+reconlab suggest-next \
   -i scans/target \
   --input-format auto \
   --target 10.10.10.5 \
@@ -409,16 +409,16 @@ cpts-tools suggest-next \
   -o outputs/next.md
 
 # Force a specific parser
-cpts-tools suggest-next -i scans/target.nmap  --input-format normal   --target 10.10.10.5
-cpts-tools suggest-next -i scans/target.gnmap --input-format grepable --target 10.10.10.5
-cpts-tools suggest-next -i scans/target.xml   --input-format xml      --target 10.10.10.5
+reconlab suggest-next -i scans/target.nmap  --input-format normal   --target 10.10.10.5
+reconlab suggest-next -i scans/target.gnmap --input-format grepable --target 10.10.10.5
+reconlab suggest-next -i scans/target.xml   --input-format xml      --target 10.10.10.5
 ```
 
 The simplest invocation derives the target IP from the scan and prints Markdown to
 stdout:
 
 ```bash
-cpts-tools suggest-next -i scans/target.xml
+reconlab suggest-next -i scans/target.xml
 ```
 
 Excerpt of the default `md` output:
@@ -445,7 +445,7 @@ Supported service-enum workflows in this release: SMB, HTTP, HTTPS, FTP, SSH,
 DNS, SMTP, LDAP, Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS (15 total), plus
 three post-foothold workflows — `linux-privesc`, `windows-privesc`,
 `ad-foothold` — and one lateral-movement workflow, `pivoting`. Run
-`cpts-tools workflow list` for the live registry with
+`reconlab workflow list` for the live registry with
 categories, priorities, and port mappings. Open ports without a service-enum
 workflow are listed under an **Unmapped Services** section so nothing is
 silently dropped.
@@ -457,7 +457,7 @@ single Markdown file. The directory passed via `-o` is created (and intermediate
 parents) if it does not already exist.
 
 ```bash
-cpts-tools suggest-next \
+reconlab suggest-next \
   -i scans/target \
   --target 10.10.10.5 \
   --host app.corp.local \
@@ -494,7 +494,7 @@ target directory that the tool does not generate are left untouched.
 
 ```bash
 # Re-render and overwrite previously generated notes
-cpts-tools suggest-next -i scans/target --output-format obsidian -o notes/target --force
+reconlab suggest-next -i scans/target --output-format obsidian -o notes/target --force
 ```
 
 The `md` default behavior (single Markdown file, optional `-o`) is unchanged.
@@ -508,8 +508,8 @@ report notes) as data. Like `md`, it prints to stdout when `-o` is omitted.
 
 ```bash
 # To a file, or piped into jq for scripting.
-cpts-tools suggest-next -i scans/target --output-format json -o outputs/methodology.json
-cpts-tools suggest-next -i scans/target --output-format json | jq '.workflows[].service_id'
+reconlab suggest-next -i scans/target --output-format json -o outputs/methodology.json
+reconlab suggest-next -i scans/target --output-format json | jq '.workflows[].service_id'
 ```
 
 Target placeholders (`[TARGET_IP]`, `[TARGET_HOST]`, `[DOMAIN]`) are substituted;

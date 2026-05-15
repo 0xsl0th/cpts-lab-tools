@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from cpts_tools.workspace import (
+from reconlab.workspace import (
     METADATA_FILENAME,
     WORKSPACE_FOLDERS,
     WorkspaceMetadata,
@@ -157,20 +157,20 @@ def test_find_latest_scan_ignores_non_scan_extensions(tmp_path: Path) -> None:
 
 
 def test_find_all_scans_returns_empty_when_missing(tmp_path: Path) -> None:
-    from cpts_tools.workspace import find_all_scans
+    from reconlab.workspace import find_all_scans
 
     assert find_all_scans(tmp_path / "scans") == []
 
 
 def test_find_all_scans_returns_empty_when_directory_empty(tmp_path: Path) -> None:
-    from cpts_tools.workspace import find_all_scans
+    from reconlab.workspace import find_all_scans
 
     (tmp_path / "scans").mkdir()
     assert find_all_scans(tmp_path / "scans") == []
 
 
 def test_find_all_scans_orders_oldest_first(tmp_path: Path) -> None:
-    from cpts_tools.workspace import find_all_scans
+    from reconlab.workspace import find_all_scans
 
     scans = tmp_path / "scans"
     scans.mkdir()
@@ -187,7 +187,7 @@ def test_find_all_scans_orders_oldest_first(tmp_path: Path) -> None:
 
 
 def test_find_all_scans_excludes_non_scan_files(tmp_path: Path) -> None:
-    from cpts_tools.workspace import find_all_scans
+    from reconlab.workspace import find_all_scans
 
     scans = tmp_path / "scans"
     scans.mkdir()

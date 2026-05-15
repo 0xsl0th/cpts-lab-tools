@@ -5,8 +5,8 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from cpts_tools import __version__
-from cpts_tools.cli import app
+from reconlab import __version__
+from reconlab.cli import app
 
 runner = CliRunner()
 
@@ -26,7 +26,7 @@ def strip_ansi(text: str) -> str:
 def test_version_flag_prints_version_and_exits() -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "cpts-tools" in result.output
+    assert "reconlab" in result.output
     assert __version__ in result.output
 
 
@@ -623,7 +623,7 @@ def test_workspace_init_creates_layout_and_report(tmp_path: Path) -> None:
     assert (workspace / "notes").is_dir()
     assert (workspace / "exploits").is_dir()
     assert (workspace / "creds").is_dir()
-    assert (workspace / ".cpts-tools.json").is_file()
+    assert (workspace / ".reconlab.json").is_file()
     report = (workspace / "report.md").read_text(encoding="utf-8")
     assert "# target" in report
     assert "`10.10.10.5`" in report
@@ -1135,8 +1135,8 @@ def test_suggest_next_includes_after_foothold_footer() -> None:
 
     assert result.exit_code == 0, result.output
     assert "## After a Foothold" in result.output
-    assert "cpts-tools workflow show linux-privesc" in result.output
-    assert "cpts-tools workflow show pivoting" in result.output
+    assert "reconlab workflow show linux-privesc" in result.output
+    assert "reconlab workflow show pivoting" in result.output
 
 
 def test_finding_list_on_empty_report_returns_placeholder_row(tmp_path: Path) -> None:

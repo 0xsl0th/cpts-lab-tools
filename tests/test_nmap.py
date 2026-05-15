@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from cpts_tools.nmap import (
+from reconlab.nmap import (
     merge_scan_results,
     parse_nmap_grepable,
     parse_nmap_normal,

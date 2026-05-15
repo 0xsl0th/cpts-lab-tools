@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from cpts_tools.findings import Severity, add_finding
-from cpts_tools.status import format_status, gather_status, severity_counts
-from cpts_tools.workspace import init_workspace
+from reconlab.findings import Severity, add_finding
+from reconlab.status import format_status, gather_status, severity_counts
+from reconlab.workspace import init_workspace
 
 
 def _ws(tmp_path: Path, name: str = "target") -> Path:

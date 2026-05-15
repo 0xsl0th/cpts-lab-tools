@@ -58,7 +58,7 @@ app.add_typer(workflow_app, name="workflow")
 
 def _version_callback(value: bool) -> None:
     if value:
-        typer.echo(f"cpts-tools {__version__}")
+        typer.echo(f"reconlab {__version__}")
         raise typer.Exit()
 
 
@@ -68,7 +68,7 @@ def main(
         bool,
         typer.Option(
             "--version",
-            help="Show the cpts-tools version and exit.",
+            help="Show the reconlab version and exit.",
             is_eager=True,
             callback=_version_callback,
         ),
@@ -596,7 +596,7 @@ def workspace_init(
     if metadata.domain:
         typer.echo(f"  Domain: {metadata.domain}")
     typer.echo(f"  Platform: {metadata.platform}")
-    typer.echo("Next: drop an nmap scan into scans/, then run `cpts-tools workspace suggest`.")
+    typer.echo("Next: drop an nmap scan into scans/, then run `reconlab workspace suggest`.")
 
 
 @workspace_app.command("suggest")
@@ -882,7 +882,7 @@ def workflow_show(
         typer.Argument(
             help=(
                 "Canonical service ID (e.g. smb, http, ldap). "
-                "Run `cpts-tools workflow list` to see all available IDs."
+                "Run `reconlab workflow list` to see all available IDs."
             ),
         ),
     ],

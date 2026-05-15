@@ -1,5 +1,5 @@
-from cpts_tools.services import _NAME_MAP, _PORT_MAP
-from cpts_tools.workflows import all_ids, by_category, lookup, resolve
+from reconlab.services import _NAME_MAP, _PORT_MAP
+from reconlab.workflows import all_ids, by_category, lookup, resolve
 
 
 def test_lookup_known_service_returns_workflow() -> None:

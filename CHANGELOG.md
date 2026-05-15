@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (Severity, Description, Evidence, Impact, Remediation) and the Executive
   Summary. Exits non-zero when issues remain, so it can gate a handover or CI.
 
+### Changed
+
+- **Renamed the project** from `cpts-lab-tools` to `reconlab`. The distribution
+  name, import package, CLI command, and workspace metadata file
+  (`.cpts-tools.json` → `.reconlab.json`) all share the new name. Any existing
+  local workspaces need their `.cpts-tools.json` renamed to `.reconlab.json` by
+  hand. GitHub redirects old URLs.
+
 ## [0.3.0] - 2026-05-14
 
 ### Added
@@ -22,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scan count and latest scan, whether methodology has been generated and whether
   it is stale relative to `scans/`, recorded findings by severity, and a single
   state-driven "next step" hint. Read-only — it never modifies the workspace.
-- **Version flag** — `cpts-tools --version` prints the installed version and
+- **Version flag** — `reconlab --version` prints the installed version and
   exits.
 - **JSON output** — `suggest-next` and `workspace suggest` accept
   `--output-format json`, emitting a structured JSON document (target metadata,
@@ -62,6 +70,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   push and pull request across Python 3.11 and 3.13; Ruff added as a dev
   dependency with a basic rule set.
 
-[Unreleased]: https://github.com/0xsl0th/cpts-lab-tools/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/0xsl0th/cpts-lab-tools/releases/tag/v0.3.0
-[0.2.0]: https://github.com/0xsl0th/cpts-lab-tools/releases/tag/v0.2.0
+[Unreleased]: https://github.com/0xsl0th/reconlab/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.3.0
+[0.2.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.2.0

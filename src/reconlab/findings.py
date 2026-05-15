@@ -195,7 +195,7 @@ def add_finding(
     report_path = workspace_path / "report.md"
     if not report_path.is_file():
         raise FileNotFoundError(
-            f"No report.md at {report_path}. Run `cpts-tools workspace init` first."
+            f"No report.md at {report_path}. Run `reconlab workspace init` first."
         )
 
     text = report_path.read_text(encoding="utf-8")
@@ -203,7 +203,7 @@ def add_finding(
     section_start, section_end = _find_section_bounds(lines)
     if section_start < 0:
         raise ValueError(
-            f"{report_path} has no `## Findings` section — is it a cpts-tools workspace report?"
+            f"{report_path} has no `## Findings` section — is it a reconlab workspace report?"
         )
 
     existing = _parse_findings_in_range(lines, section_start, section_end)
@@ -263,7 +263,7 @@ def list_findings(workspace_path: Path) -> list[ParsedFinding]:
     report_path = workspace_path / "report.md"
     if not report_path.is_file():
         raise FileNotFoundError(
-            f"No report.md at {report_path}. Run `cpts-tools workspace init` first."
+            f"No report.md at {report_path}. Run `reconlab workspace init` first."
         )
     return parse_findings(report_path.read_text(encoding="utf-8"))
 

@@ -111,7 +111,7 @@ def check_report(workspace_path: Path) -> ReportCheck:
     report_path = workspace_path / "report.md"
     if not report_path.is_file():
         raise FileNotFoundError(
-            f"No report.md at {report_path}. Run `cpts-tools workspace init` first."
+            f"No report.md at {report_path}. Run `reconlab workspace init` first."
         )
 
     text = report_path.read_text(encoding="utf-8")

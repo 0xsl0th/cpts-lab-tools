@@ -1,5 +1,5 @@
-from cpts_tools.render import TargetContext, render_methodology
-from cpts_tools.workflows import lookup, resolve
+from reconlab.render import TargetContext, render_methodology
+from reconlab.workflows import lookup, resolve
 
 
 def _ctx(**overrides):
@@ -30,10 +30,10 @@ def test_render_after_foothold_footer_points_at_post_foothold_workflows() -> Non
     output = render_methodology(_ctx(), [])
 
     assert "## After a Foothold" in output
-    assert "cpts-tools workflow show linux-privesc" in output
-    assert "cpts-tools workflow show windows-privesc" in output
-    assert "cpts-tools workflow show ad-foothold" in output
-    assert "cpts-tools workflow show pivoting" in output
+    assert "reconlab workflow show linux-privesc" in output
+    assert "reconlab workflow show windows-privesc" in output
+    assert "reconlab workflow show ad-foothold" in output
+    assert "reconlab workflow show pivoting" in output
     # The footer sits before the aggregated report note.
     assert output.index("## After a Foothold") < output.index(
         "## Aggregated Report Note Draft"

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from cpts_tools.findings import (
+from reconlab.findings import (
     Finding,
     ParsedFinding,
     Severity,
@@ -11,7 +11,7 @@ from cpts_tools.findings import (
     list_findings,
     render_finding_block,
 )
-from cpts_tools.workspace import WorkspaceMetadata, init_workspace
+from reconlab.workspace import WorkspaceMetadata, init_workspace
 
 
 def _workspace(tmp_path: Path, **overrides) -> Path:
