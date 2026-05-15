@@ -6,6 +6,7 @@ from reconlab.web import (
     detect_format,
     filter_by_status,
     format_web_results,
+    merge_web_results,
     parse_feroxbuster_json,
     parse_feroxbuster_text,
     parse_gobuster_text,
@@ -169,3 +170,72 @@ def test_format_web_results_inlines_redirect_target() -> None:
     output = format_web_results(parse_feroxbuster_text(FEROX_TEXT))
     # The /login row in the fixture is a 301 redirect to /login/.
     assert "http://10.10.10.5/login -> /login/" in output
+
+
+def test_merge_web_results_handles_empty_input() -> None:
+    assert merge_web_results([]) == []
+
+
+def test_merge_web_results_dedupes_same_url_method_status() -> None:
+    older = [
+        {
+            "status": "200", "method": "GET", "size": "100", "words": "5",
+            "lines": "1", "url": "http://t/x", "redirect": "-",
+        }
+    ]
+    newer = [
+        {
+            "status": "200", "method": "GET", "size": "1234", "words": "46",
+            "lines": "4", "url": "http://t/x", "redirect": "-",
+        }
+    ]
+    merged = merge_web_results(
+        [(Path("older.json"), older), (Path("newer.json"), newer)]
+    )
+
+    assert len(merged) == 1
+    # Newer non-placeholder values win for size/words/lines.
+    assert merged[0]["size"] == "1234"
+    assert merged[0]["words"] == "46"
+    assert merged[0]["lines"] == "4"
+
+
+def test_merge_web_results_unions_distinct_rows() -> None:
+    a = [{"status": "200", "method": "GET", "size": "1", "words": "-",
+          "lines": "-", "url": "http://t/a", "redirect": "-"}]
+    b = [{"status": "200", "method": "GET", "size": "2", "words": "-",
+          "lines": "-", "url": "http://t/b", "redirect": "-"}]
+    merged = merge_web_results([(Path("a.txt"), a), (Path("b.txt"), b)])
+    urls = {r["url"] for r in merged}
+    assert urls == {"http://t/a", "http://t/b"}
+
+
+def test_merge_web_results_placeholder_does_not_overwrite_real_data() -> None:
+    older = [
+        {
+            "status": "200", "method": "GET", "size": "1234", "words": "46",
+            "lines": "4", "url": "http://t/x", "redirect": "-",
+        }
+    ]
+    newer = [
+        {  # gobuster-style: no word/line data
+            "status": "200", "method": "GET", "size": "1234", "words": "-",
+            "lines": "-", "url": "http://t/x", "redirect": "-",
+        }
+    ]
+    merged = merge_web_results(
+        [(Path("older.json"), older), (Path("newer.txt"), newer)]
+    )
+
+    assert merged[0]["words"] == "46"
+    assert merged[0]["lines"] == "4"
+
+
+def test_merge_web_results_treats_method_status_url_as_compound_key() -> None:
+    rows_a = [{"status": "200", "method": "GET", "size": "1", "words": "-",
+               "lines": "-", "url": "http://t/x", "redirect": "-"}]
+    rows_b = [{"status": "200", "method": "POST", "size": "2", "words": "-",
+               "lines": "-", "url": "http://t/x", "redirect": "-"}]
+    merged = merge_web_results([(Path("a.txt"), rows_a), (Path("b.txt"), rows_b)])
+    # Same URL+status but different method → two rows.
+    assert len(merged) == 2

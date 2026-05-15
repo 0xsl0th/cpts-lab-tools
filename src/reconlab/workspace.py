@@ -15,8 +15,10 @@ WORKSPACE_FOLDERS: tuple[str, ...] = (
     "notes",
     "exploits",
     "creds",
+    "web",
 )
 SCAN_EXTENSIONS: tuple[str, ...] = (".xml", ".nmap", ".gnmap")
+WEB_EXTENSIONS: tuple[str, ...] = (".txt", ".json")
 
 
 @dataclass
@@ -216,5 +218,17 @@ def find_all_scans(scans_dir: Path) -> list[Path]:
         path
         for path in scans_dir.iterdir()
         if path.is_file() and path.suffix.lower() in SCAN_EXTENSIONS
+    ]
+    return sorted(candidates, key=lambda p: p.stat().st_mtime)
+
+
+def find_all_web_files(web_dir: Path) -> list[Path]:
+    """Return every web-output file (.txt/.json) in web_dir, ordered oldest-first by mtime."""
+    if not web_dir.is_dir():
+        return []
+    candidates = [
+        path
+        for path in web_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in WEB_EXTENSIONS
     ]
     return sorted(candidates, key=lambda p: p.stat().st_mtime)

@@ -28,7 +28,8 @@ python -m pip install -e ".[dev]"
 |---------|--------------|
 | `workspace init` | Scaffold a target folder, metadata file, and a richer report scaffold. |
 | `workspace suggest` | Generate methodology from `scans/` — merges every scan file by default. |
-| `workspace status` | Summarize a workspace — scans, methodology freshness, findings, and the next step. |
+| `workspace status` | Summarize a workspace — scans, methodology freshness, findings, web findings, and the next step. |
+| `workspace ingest-web` | Merge every feroxbuster / gobuster output in a workspace's `web/` folder into one table. |
 | `workspace check` | Lint `report.md` for wrap-up readiness — unfilled findings and sections. Exits non-zero on issues. |
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry — no scan or workspace needed. |
@@ -260,6 +261,32 @@ The **Next** line is state-driven: it points at `workspace suggest` when no
 methodology exists yet, flags a stale methodology once newer scans land, and
 nudges toward `finding add` after methodology is in place. It never modifies
 the workspace — `workspace status` is read-only.
+
+### Ingest web content-discovery output
+
+`workspace init` now creates a `web/` folder alongside `scans/`. Drop
+feroxbuster (text or `--json`) or gobuster output there, and
+`workspace ingest-web` merges every file into one deduplicated table —
+parallel to how `workspace suggest` merges every nmap scan in `scans/`.
+
+```bash
+# After running content discovery against an HTTP service:
+feroxbuster -u http://10.10.10.5 --json -o ~/labs/target/web/initial.json
+gobuster dir -u http://10.10.10.5 -w wordlist.txt -o ~/labs/target/web/dir.txt
+
+# From inside the workspace, or point at one explicitly:
+reconlab workspace ingest-web
+reconlab workspace ingest-web ~/labs/target
+
+# Filter to specific status codes:
+reconlab workspace ingest-web --status 200,301,403
+```
+
+Findings deduplicate by `(method, status, URL)`; when the same URL+method+
+status appears in multiple files, the most recent non-placeholder size /
+word / line count wins. `workspace status` shows the merged count alongside
+scans and findings, and the **Next** hint nudges toward `ingest-web` once
+web outputs are present.
 
 ### Check report readiness
 

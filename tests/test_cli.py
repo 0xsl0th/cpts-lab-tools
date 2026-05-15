@@ -765,6 +765,63 @@ def test_workspace_status_errors_outside_workspace(tmp_path: Path) -> None:
     assert "workspace init" in strip_ansi(result.output)
 
 
+def test_workspace_ingest_web_merges_files(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    (workspace / "web" / "ferox.txt").write_text(
+        FIXTURE_FEROX_TEXT.read_text(), encoding="utf-8"
+    )
+    (workspace / "web" / "gobuster.txt").write_text(
+        FIXTURE_GOBUSTER.read_text(), encoding="utf-8"
+    )
+
+    result = runner.invoke(app, ["workspace", "ingest-web", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "Merging 2 web outputs" in result.output
+    assert "http://10.10.10.5/admin" in result.output  # from ferox fixture
+    assert "/admin" in result.output  # from gobuster fixture (path only)
+
+
+def test_workspace_ingest_web_errors_when_empty(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    result = runner.invoke(app, ["workspace", "ingest-web", str(tmp_path / "target")])
+    assert result.exit_code != 0
+    assert "web-output file" in strip_ansi(result.output)
+
+
+def test_workspace_ingest_web_errors_outside_workspace(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["workspace", "ingest-web", str(tmp_path)])
+    assert result.exit_code != 0
+    assert "workspace init" in strip_ansi(result.output)
+
+
+def test_workspace_ingest_web_status_filter(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    (workspace / "web" / "ferox.txt").write_text(
+        FIXTURE_FEROX_TEXT.read_text(), encoding="utf-8"
+    )
+    result = runner.invoke(
+        app,
+        ["workspace", "ingest-web", str(workspace), "--status", "200"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "/admin" in result.output
+    # 301/403/405 entries from the fixture should be filtered out.
+    assert "/login" not in result.output
+    assert "/.git" not in result.output
+
+
 def test_workspace_check_flags_incomplete_report(tmp_path: Path) -> None:
     runner.invoke(
         app,

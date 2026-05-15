@@ -216,3 +216,31 @@ def format_web_results(rows: list[dict[str, str]]) -> str:
 
     separator = "  ".join("-" * w for w in widths)
     return "\n".join([render_row(headers), separator, *(render_row(r) for r in body)])
+
+
+def merge_web_results(
+    files: list[tuple[Path, list[dict[str, str]]]],
+) -> list[dict[str, str]]:
+    """Dedupe rows across multiple parsed files, keyed by (method, status, url).
+
+    The input is `(source_file, parsed_rows)` ordered oldest-first by mtime —
+    matching the contract of `find_all_web_files`. When the same URL+method+
+    status appears in more than one file, the most recent non-placeholder
+    `size` / `words` / `lines` / `redirect` win, so a later targeted scan can
+    refine an earlier broad one without losing data.
+
+    Output rows are sorted by URL for stable display.
+    """
+    merged: dict[tuple[str, str, str], dict[str, str]] = {}
+    for _path, rows in files:
+        for row in rows:
+            key = (row["method"], row["status"], row["url"])
+            existing = merged.get(key)
+            if existing is None:
+                merged[key] = dict(row)
+                continue
+            for field_name in ("size", "words", "lines", "redirect"):
+                value = row.get(field_name, "-")
+                if value and value != "-":
+                    existing[field_name] = value
+    return sorted(merged.values(), key=lambda r: r["url"])

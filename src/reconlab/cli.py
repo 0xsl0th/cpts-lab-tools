@@ -32,6 +32,7 @@ from .web import (
     WebFormat,
     filter_by_status,
     format_web_results,
+    merge_web_results,
     parse_web_results,
 )
 from .workflows import all_ids as all_workflow_ids
@@ -39,6 +40,7 @@ from .workflows import lookup as lookup_workflow
 from .workflows import resolve as resolve_workflows
 from .workspace import (
     find_all_scans,
+    find_all_web_files,
     find_latest_scan,
     init_workspace,
     read_metadata,
@@ -686,6 +688,69 @@ def workspace_status(
         raise typer.BadParameter(str(exc)) from exc
 
     typer.echo(format_status(status))
+
+
+@workspace_app.command("ingest-web")
+def workspace_ingest_web(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Workspace path (defaults to the current directory)."),
+    ] = Path("."),
+    status: Annotated[
+        str | None,
+        typer.Option(
+            "--status",
+            help="Comma-separated status codes to keep (e.g. '200,301,403'). Default: all rows.",
+        ),
+    ] = None,
+) -> None:
+    """Merge every feroxbuster/gobuster output in a workspace's web/ folder into one table."""
+    try:
+        read_metadata(path)  # validates this is a workspace
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    web_dir = path / "web"
+    files = find_all_web_files(web_dir)
+    if not files:
+        raise typer.BadParameter(
+            f"No web-output file (.txt / .json) in {web_dir}. "
+            "Drop a feroxbuster or gobuster output there first."
+        )
+
+    parsed: list[tuple[Path, list[dict[str, str]]]] = []
+    skipped: list[Path] = []
+    for web_file in files:
+        try:
+            rows = parse_web_results(web_file, WebFormat.AUTO)
+        except (ValueError, OSError):
+            skipped.append(web_file)
+            continue
+        if not rows:
+            skipped.append(web_file)
+            continue
+        parsed.append((web_file, rows))
+
+    if not parsed:
+        raise typer.BadParameter(
+            f"No parseable web outputs in {web_dir}. Tried: {len(files)} file(s)."
+        )
+
+    if len(parsed) == 1:
+        typer.echo(f"Using web output: {parsed[0][0]}")
+    else:
+        typer.echo(f"Merging {len(parsed)} web outputs (oldest → newest):")
+        for web_file, _ in parsed:
+            typer.echo(f"  {web_file}")
+    if skipped:
+        typer.echo(f"  (skipped {len(skipped)} unparseable file(s))")
+    typer.echo("")
+
+    merged = merge_web_results(parsed)
+    if status:
+        merged = filter_by_status(merged, status.split(","))
+
+    typer.echo(format_web_results(merged))
 
 
 @workspace_app.command("check")

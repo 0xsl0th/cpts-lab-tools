@@ -12,7 +12,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .findings import ParsedFinding, list_findings, real_findings
-from .workspace import WorkspaceMetadata, find_all_scans, read_metadata
+from .web import WebFormat, merge_web_results, parse_web_results
+from .workspace import (
+    WorkspaceMetadata,
+    find_all_scans,
+    find_all_web_files,
+    read_metadata,
+)
 
 # Methodology output locations written by `workspace suggest`.
 _VAULT_INDEX = ("notes", "methodology", "index.md")
@@ -30,6 +36,8 @@ class WorkspaceStatus:
     methodology: Path | None  # vault directory or methodology.md, if generated
     methodology_stale: bool  # True when a scan is newer than the methodology
     findings: list[ParsedFinding]  # scaffold placeholder excluded
+    web_file_count: int  # files in web/ recognized as feroxbuster/gobuster output
+    web_finding_count: int  # deduplicated rows across all web/ files
     next_step: str
 
 
@@ -56,6 +64,7 @@ def _next_step(
     methodology: Path | None,
     methodology_stale: bool,
     findings: list[ParsedFinding],
+    web_finding_count: int,
 ) -> str:
     """Pick the single most useful next action for the current workspace state."""
     if scan_count == 0:
@@ -68,6 +77,12 @@ def _next_step(
             "`reconlab workspace suggest --force`."
         )
     if not findings:
+        if web_finding_count:
+            return (
+                "Review web findings with `reconlab workspace ingest-web`, "
+                "work through notes/methodology/, then record results with "
+                "`reconlab finding add`."
+            )
         return (
             "Work through notes/methodology/, and record results with "
             "`reconlab finding add`."
@@ -103,6 +118,17 @@ def gather_status(path: Path) -> WorkspaceStatus:
         # Metadata exists but report.md was removed — treat as no findings.
         findings = []
 
+    web_files = find_all_web_files(path / "web")
+    parsed_web: list[tuple[Path, list[dict[str, str]]]] = []
+    for web_file in web_files:
+        try:
+            rows = parse_web_results(web_file, WebFormat.AUTO)
+        except (ValueError, OSError):
+            continue  # unparseable file — skip silently for status
+        if rows:
+            parsed_web.append((web_file, rows))
+    web_findings = merge_web_results(parsed_web) if parsed_web else []
+
     return WorkspaceStatus(
         path=path,
         metadata=metadata,
@@ -111,7 +137,15 @@ def gather_status(path: Path) -> WorkspaceStatus:
         methodology=methodology,
         methodology_stale=methodology_stale,
         findings=findings,
-        next_step=_next_step(len(scans), methodology, methodology_stale, findings),
+        web_file_count=len(parsed_web),
+        web_finding_count=len(web_findings),
+        next_step=_next_step(
+            len(scans),
+            methodology,
+            methodology_stale,
+            findings,
+            len(web_findings),
+        ),
     )
 
 
@@ -150,6 +184,19 @@ def format_status(status: WorkspaceStatus) -> str:
         if status.methodology_stale:
             shown += "  — STALE (newer scans present)"
         lines.append(row("Methodology", shown))
+
+    if status.web_file_count == 0:
+        lines.append(row("Web", "none"))
+    else:
+        plural_files = "file" if status.web_file_count == 1 else "files"
+        plural_rows = "finding" if status.web_finding_count == 1 else "findings"
+        lines.append(
+            row(
+                "Web",
+                f"{status.web_finding_count} {plural_rows} across "
+                f"{status.web_file_count} {plural_files}",
+            )
+        )
 
     if not status.findings:
         lines.append(row("Findings", "none recorded"))

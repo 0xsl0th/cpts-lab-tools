@@ -125,6 +125,39 @@ def test_severity_counts_orders_critical_first(tmp_path: Path) -> None:
     assert counts == [("Critical", 1), ("Low", 2)]
 
 
+def test_status_counts_web_findings(tmp_path: Path) -> None:
+    workspace = _ws(tmp_path)
+    (workspace / "web" / "ferox.txt").write_text(
+        "        200      GET        4l       46w      1234c http://10.10.10.5/admin\n"
+        "        403      GET        2l       12w       287c http://10.10.10.5/.git\n",
+        encoding="utf-8",
+    )
+    status = gather_status(workspace)
+
+    assert status.web_file_count == 1
+    assert status.web_finding_count == 2
+
+
+def test_status_web_findings_zero_when_no_web_dir(tmp_path: Path) -> None:
+    status = gather_status(_ws(tmp_path))
+    assert status.web_file_count == 0
+    assert status.web_finding_count == 0
+
+
+def test_status_next_step_mentions_ingest_web_when_relevant(tmp_path: Path) -> None:
+    workspace = _ws(tmp_path)
+    _scan(workspace, "tcp.xml", mtime=1000)
+    _methodology_vault(workspace, mtime=2000)
+    (workspace / "web" / "ferox.txt").write_text(
+        "        200      GET        4l       46w      1234c http://10.10.10.5/admin\n",
+        encoding="utf-8",
+    )
+    status = gather_status(workspace)
+
+    assert status.web_finding_count == 1
+    assert "ingest-web" in status.next_step
+
+
 def test_format_status_includes_key_lines(tmp_path: Path) -> None:
     workspace = _ws(tmp_path)
     _scan(workspace, "tcp.xml", mtime=1000)

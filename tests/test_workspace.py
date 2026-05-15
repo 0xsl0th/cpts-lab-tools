@@ -186,6 +186,33 @@ def test_find_all_scans_orders_oldest_first(tmp_path: Path) -> None:
     assert find_all_scans(scans) == [first, middle, last]
 
 
+def test_init_workspace_creates_web_folder(tmp_path: Path) -> None:
+    from reconlab.workspace import init_workspace
+
+    workspace = tmp_path / "alpha"
+    init_workspace(workspace, name="alpha")
+    assert (workspace / "web").is_dir()
+
+
+def test_find_all_web_files_empty_when_missing(tmp_path: Path) -> None:
+    from reconlab.workspace import find_all_web_files
+
+    assert find_all_web_files(tmp_path / "web") == []
+
+
+def test_find_all_web_files_filters_by_extension(tmp_path: Path) -> None:
+    from reconlab.workspace import find_all_web_files
+
+    web = tmp_path / "web"
+    web.mkdir()
+    (web / "note.md").write_text("ignored", encoding="utf-8")
+    txt = web / "ferox.txt"
+    txt.write_text("x", encoding="utf-8")
+    js = web / "ferox.json"
+    js.write_text("{}", encoding="utf-8")
+    assert set(find_all_web_files(web)) == {txt, js}
+
+
 def test_find_all_scans_excludes_non_scan_files(tmp_path: Path) -> None:
     from reconlab.workspace import find_all_scans
 
