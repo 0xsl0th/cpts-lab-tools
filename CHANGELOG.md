@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Removed
+
+- **`report-init` and `obsidian-note` commands** — both were deprecated in 0.4.0
+  with a removal promise. Migrate to `workspace init` (replaces `report-init`)
+  and `workspace init` + `workspace suggest` (replaces `obsidian-note`). The
+  internal `_warn_deprecated` helper goes away with them since no callers
+  remain.
+
 ## [0.5.0] - 2026-05-15
 
 ### Added
@@ -91,6 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   push and pull request across Python 3.11 and 3.13; Ruff added as a dev
   dependency with a basic rule set.
 
+[Unreleased]: https://github.com/0xsl0th/reconlab/compare/v0.5.0...HEAD
 [0.5.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.5.0
 [0.4.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.4.0
 [0.3.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.3.0

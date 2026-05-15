@@ -36,7 +36,6 @@ python -m pip install -e ".[dev]"
 | `parse-nmap` | Tabular summary of open services from an nmap XML scan. |
 | `parse-web` | Tabular summary of feroxbuster / gobuster output (text or JSON). |
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
-| `report-init` / `obsidian-note` | **Deprecated** — superseded by `workspace init` / `workspace suggest`; slated for removal. |
 
 Run `reconlab --help` (or `reconlab <command> --help`) for full option
 lists, or `reconlab --version` to print the installed version.
@@ -381,47 +380,6 @@ The Markdown is the same per-workflow content that `workspace suggest` and
 `suggest-next` write into the methodology document. Those two commands also
 append an **After a Foothold** footer pointing at the post-foothold workflows,
 so the generated methodology carries you past initial access.
-
-### Initialize a report folder (deprecated)
-
-> **Deprecated.** Superseded by `workspace init`; will be removed in a future
-> release. Running it prints a deprecation notice on stderr. Migrate with
-> `reconlab workspace init <name>` — you get the same folder tree, plus
-> persisted metadata and a richer report scaffold.
-
-`report-init` is the simpler predecessor of `workspace init` — it creates the
-folder tree only, without metadata or the richer report scaffold.
-
-```bash
-reconlab report-init target --output-dir labs
-```
-
-Creates:
-
-```text
-labs/target/
-├── loot/
-├── notes/
-├── scans/
-├── screenshots/
-└── report.md
-```
-
-### Generate an Obsidian note template (deprecated)
-
-> **Deprecated.** Superseded by `workspace init` + `workspace suggest`; will be
-> removed in a future release. Running it prints a deprecation notice on stderr
-> (the note itself still goes to stdout, so existing redirects keep working).
-> Migrate to `workspace suggest`, whose generated vault is richer and stays in
-> sync with scans.
-
-`obsidian-note` is a simple single-file note scaffold from before the Obsidian
-vault renderer existed. For new work, prefer `workspace init` + `workspace
-suggest` — the generated vault is richer and stays in sync with scan results.
-
-```bash
-reconlab obsidian-note target --ip 10.10.10.5 > target.md
-```
 
 ### Suggest the next steps from an nmap scan
 

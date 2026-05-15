@@ -198,49 +198,6 @@ def test_make_hosts_ip_flag_alone_errors_without_hostname() -> None:
     assert "hostname" in strip_ansi(result.output)
 
 
-def test_report_init_creates_machine_structure(tmp_path: Path) -> None:
-    result = runner.invoke(
-        app,
-        ["report-init", "target", "--output-dir", str(tmp_path)],
-    )
-
-    machine_dir = tmp_path / "target"
-    assert result.exit_code == 0
-    assert (machine_dir / "scans").is_dir()
-    assert (machine_dir / "screenshots").is_dir()
-    assert (machine_dir / "loot").is_dir()
-    assert (machine_dir / "notes").is_dir()
-    assert (machine_dir / "report.md").is_file()
-    assert "# target" in (machine_dir / "report.md").read_text(encoding="utf-8")
-
-
-def test_report_init_warns_deprecated(tmp_path: Path) -> None:
-    result = runner.invoke(
-        app, ["report-init", "target", "--output-dir", str(tmp_path)]
-    )
-    assert result.exit_code == 0
-    assert "deprecated" in result.output
-    assert "workspace init" in result.output
-
-
-def test_obsidian_note_generates_template() -> None:
-    result = runner.invoke(app, ["obsidian-note", "target", "--ip", "10.10.10.5"])
-
-    assert result.exit_code == 0
-    assert "# target" in result.output
-    assert "Target IP: 10.10.10.5" in result.output
-    assert "Scope: Authorized lab target only" in result.output
-    assert "nmap -sV -sC -oA scans/target 10.10.10.5" in result.output
-
-
-def test_obsidian_note_warns_deprecated() -> None:
-    result = runner.invoke(app, ["obsidian-note", "target", "--ip", "10.10.10.5"])
-    assert result.exit_code == 0
-    assert "deprecated" in result.output
-    # The note itself still goes to stdout, so redirects keep working.
-    assert "# target" in result.output
-
-
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_XML = FIXTURE_DIR / "sample_nmap.xml"
 FIXTURE_NORMAL = FIXTURE_DIR / "sample_nmap.nmap"
