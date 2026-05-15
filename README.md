@@ -1,6 +1,6 @@
 # cpts-lab-tools
 
-Minimal Python CLI helpers for authorized HTB/CPTS lab work. The project focuses on lab organization, scan parsing, and reporting workflows. It does not include exploit automation and is not intended for use against real third-party systems.
+Minimal Python CLI helpers for authorized penetration-testing lab work. The project focuses on lab organization, scan parsing, and reporting workflows. It does not include exploit automation and is not intended for use against real third-party systems.
 
 ## Install
 
@@ -27,22 +27,22 @@ Run `cpts-tools --help` (or `cpts-tools <command> --help`) for full option lists
 
 ## Lab session walkthrough
 
-End-to-end flow for a typical HTB/CPTS target. Replace placeholders with the
+End-to-end flow for a typical lab target. Replace placeholders with the
 real values your lab gives you.
 
 ```bash
 # 1. Scaffold a workspace with metadata baked in.
 cpts-tools workspace init target \
   --ip 10.10.10.5 \
-  --host target.htb \
-  --domain target.htb \
-  --platform htb
+  --host app.corp.local \
+  --domain corp.local \
+  --platform lab
 
 cd target
 
 # 2. (Optional) Print the /etc/hosts entry and a copy-paste shell command.
 #    Does NOT modify /etc/hosts — you run the printed command yourself.
-cpts-tools make-hosts 10.10.10.5 target.htb
+cpts-tools make-hosts 10.10.10.5 app.corp.local
 
 # 3. Run nmap into the workspace's scans/ folder.
 sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
@@ -96,9 +96,9 @@ cpts-tools parse-nmap scans/target.xml
 Example output:
 
 ```text
-Host        Names       Port  Proto  Service  Product  Version
-----------  ----------  ----  -----  -------  -------  -------
-10.10.10.5  target.htb  80    tcp    http     nginx    1.18.0
+Host        Names           Port  Proto  Service  Product  Version
+----------  --------------  ----  -----  -------  -------  -------
+10.10.10.5  app.corp.local  80    tcp    http     nginx    1.18.0
 ```
 
 ### Make an `/etc/hosts` entry
@@ -109,17 +109,17 @@ Host        Names       Port  Proto  Service  Product  Version
 Positional form:
 
 ```bash
-cpts-tools make-hosts 10.10.10.5 target.htb dev.target.htb Dev.target.htb DEV.target.htb
+cpts-tools make-hosts 10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
 ```
 
 Output:
 
 ```text
 # Add this to /etc/hosts:
-10.10.10.5 target.htb dev.target.htb Dev.target.htb DEV.target.htb
+10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
 
 # Or run:
-echo "10.10.10.5 target.htb dev.target.htb Dev.target.htb DEV.target.htb" | sudo tee -a /etc/hosts
+echo "10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local" | sudo tee -a /etc/hosts
 ```
 
 Flag form (equivalent output):
@@ -127,8 +127,8 @@ Flag form (equivalent output):
 ```bash
 cpts-tools make-hosts \
   --ip 10.10.10.5 \
-  --host target.htb \
-  --aliases dev.target.htb Dev.target.htb DEV.target.htb
+  --host app.corp.local \
+  --aliases dev.corp.local Dev.corp.local DEV.corp.local
 ```
 
 In the flag form, the first value after `--aliases` is consumed by the flag and
@@ -145,9 +145,9 @@ persists target metadata so downstream commands inherit it.
 ```bash
 cpts-tools workspace init target \
   --ip 10.10.10.5 \
-  --host target.htb \
-  --domain target.htb \
-  --platform htb \
+  --host app.corp.local \
+  --domain corp.local \
+  --platform lab \
   -o ~/labs
 ```
 
@@ -259,7 +259,7 @@ cpts-tools workflow show smb
 cpts-tools workflow show linux-privesc
 
 # Or substitute target metadata while rendering
-cpts-tools workflow show ad-foothold --domain target.htb
+cpts-tools workflow show ad-foothold --domain corp.local
 ```
 
 The Markdown is the same per-workflow content that `workspace suggest` and
@@ -326,8 +326,8 @@ cpts-tools suggest-next \
   -i scans/target \
   --input-format auto \
   --target 10.10.10.5 \
-  --host target.htb \
-  --domain target.htb \
+  --host app.corp.local \
+  --domain corp.local \
   -o outputs/next.md
 
 # Force a specific parser
@@ -382,8 +382,8 @@ parents) if it does not already exist.
 cpts-tools suggest-next \
   -i scans/target \
   --target 10.10.10.5 \
-  --host target.htb \
-  --domain target.htb \
+  --host app.corp.local \
+  --domain corp.local \
   --output-format obsidian \
   -o notes/target
 ```
