@@ -1,0 +1,5 @@
+{"type":"scan-config","version":"2.10.0","target_url":"http://10.10.10.5"}
+{"type":"response","url":"http://10.10.10.5/admin","method":"GET","status":200,"content_length":1234,"word_count":46,"line_count":4}
+{"type":"response","url":"http://10.10.10.5/.git","method":"GET","status":403,"content_length":287,"word_count":12,"line_count":2}
+{"type":"response","url":"http://10.10.10.5/api/users","method":"GET","status":200,"content_length":4567,"word_count":62,"line_count":8}
+{"type":"report","scans":1}

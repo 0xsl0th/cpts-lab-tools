@@ -28,6 +28,12 @@ from .render import (
 from .report import check_report, format_report_check
 from .services import canonicalize, ports_for
 from .status import format_status, gather_status
+from .web import (
+    WebFormat,
+    filter_by_status,
+    format_web_results,
+    parse_web_results,
+)
 from .workflows import all_ids as all_workflow_ids
 from .workflows import lookup as lookup_workflow
 from .workflows import resolve as resolve_workflows
@@ -296,6 +302,49 @@ def parse_nmap(
         typer.echo(format_services(parse_nmap_services(xml_file)))
     except ElementTree.ParseError as exc:
         raise typer.BadParameter(f"Invalid nmap XML: {exc}") from exc
+
+
+@app.command("parse-web")
+def parse_web(
+    input_file: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="feroxbuster or gobuster output file.",
+        ),
+    ],
+    input_format: Annotated[
+        WebFormat,
+        typer.Option(
+            "--input-format",
+            help=(
+                "Web-tool output format. `auto` sniffs the file; "
+                "`feroxbuster` and `gobuster` are text formats; "
+                "`feroxbuster-json` is newline-delimited JSON from feroxbuster's `--json`."
+            ),
+        ),
+    ] = WebFormat.AUTO,
+    status: Annotated[
+        str | None,
+        typer.Option(
+            "--status",
+            help="Comma-separated status codes to keep (e.g. '200,301,403'). Default: all rows in the file.",
+        ),
+    ] = None,
+) -> None:
+    """Parse feroxbuster/gobuster output into a clean status/size/URL table."""
+    try:
+        rows = parse_web_results(input_file, input_format)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    if status:
+        rows = filter_by_status(rows, status.split(","))
+
+    typer.echo(format_web_results(rows))
 
 
 @app.command("make-hosts")

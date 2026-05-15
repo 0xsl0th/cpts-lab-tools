@@ -1,0 +1,5 @@
+        200      GET        4l       46w      1234c http://10.10.10.5/admin
+        301      GET        0l        0w        0c http://10.10.10.5/login => /login/
+        403      GET        2l       12w       287c http://10.10.10.5/.git
+        200      GET        8l       62w      4567c http://10.10.10.5/api/users
+        405      GET        1l        4w        66c http://10.10.10.5/api/upload

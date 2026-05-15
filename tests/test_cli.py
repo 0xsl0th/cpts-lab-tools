@@ -245,6 +245,55 @@ FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_XML = FIXTURE_DIR / "sample_nmap.xml"
 FIXTURE_NORMAL = FIXTURE_DIR / "sample_nmap.nmap"
 FIXTURE_GREPABLE = FIXTURE_DIR / "sample_nmap.gnmap"
+FIXTURE_FEROX_TEXT = FIXTURE_DIR / "sample_feroxbuster.txt"
+FIXTURE_FEROX_JSON = FIXTURE_DIR / "sample_feroxbuster.json"
+FIXTURE_GOBUSTER = FIXTURE_DIR / "sample_gobuster.txt"
+
+
+def test_parse_web_feroxbuster_text() -> None:
+    result = runner.invoke(app, ["parse-web", str(FIXTURE_FEROX_TEXT)])
+    assert result.exit_code == 0, result.output
+    assert "Status" in result.output
+    assert "http://10.10.10.5/admin" in result.output
+    # Redirect inlined into the URL column.
+    assert "http://10.10.10.5/login -> /login/" in result.output
+
+
+def test_parse_web_feroxbuster_json_auto_detected() -> None:
+    result = runner.invoke(app, ["parse-web", str(FIXTURE_FEROX_JSON)])
+    assert result.exit_code == 0, result.output
+    assert "http://10.10.10.5/admin" in result.output
+    # The fixture's scan-config and report lines must not leak through.
+    assert "scan-config" not in result.output
+    assert "report" not in result.output
+
+
+def test_parse_web_gobuster_text() -> None:
+    result = runner.invoke(app, ["parse-web", str(FIXTURE_GOBUSTER)])
+    assert result.exit_code == 0, result.output
+    assert "/admin" in result.output
+    assert "/login -> /login/" in result.output
+
+
+def test_parse_web_status_filter() -> None:
+    result = runner.invoke(
+        app, ["parse-web", str(FIXTURE_FEROX_TEXT), "--status", "200"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "/admin" in result.output
+    assert "/api/users" in result.output
+    # /login (301), /.git (403), /api/upload (405) should be filtered out.
+    assert "/login" not in result.output
+    assert "/.git" not in result.output
+
+
+def test_parse_web_explicit_format_override() -> None:
+    result = runner.invoke(
+        app,
+        ["parse-web", str(FIXTURE_GOBUSTER), "--input-format", "gobuster"],
+    )
+    assert result.exit_code == 0, result.output
+    assert "/admin" in result.output
 
 
 def test_suggest_next_prints_methodology_to_stdout() -> None:

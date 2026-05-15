@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the field-manual reference (Oracle, IMAP/POP3, rsync); two cover common
   pentest methodology (Redis, VNC). The registry now covers 20 service-enum
   workflows.
+- **`parse-web` command** — ingests feroxbuster (text or `--json`) and
+  gobuster text output and prints a clean Status/Method/Size/URL table,
+  parallel to `parse-nmap`. Auto-detects the format, strips ANSI colors,
+  inlines redirect targets into the URL column, and supports `--status`
+  filtering. Fills the gap that the workspace previously only ingested nmap.
 
 ## [0.4.0] - 2026-05-15
 

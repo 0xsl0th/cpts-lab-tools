@@ -34,6 +34,7 @@ python -m pip install -e ".[dev]"
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry — no scan or workspace needed. |
 | `make-hosts` | Print an `/etc/hosts` entry plus a copy-paste shell command. Read-only. |
 | `parse-nmap` | Tabular summary of open services from an nmap XML scan. |
+| `parse-web` | Tabular summary of feroxbuster / gobuster output (text or JSON). |
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
 | `report-init` / `obsidian-note` | **Deprecated** — superseded by `workspace init` / `workspace suggest`; slated for removal. |
 
@@ -115,6 +116,41 @@ Host        Names           Port  Proto  Service  Product  Version
 ----------  --------------  ----  -----  -------  -------  -------
 10.10.10.5  app.corp.local  80    tcp    http     nginx    1.18.0
 ```
+
+### Parse feroxbuster / gobuster output
+
+`parse-web` ingests web content-discovery output and prints a clean
+Status/Method/Size/URL table. It auto-detects feroxbuster text, feroxbuster
+`--json`, and gobuster text formats, strips ANSI colours, and inlines redirect
+targets into the URL column.
+
+```bash
+# Auto-detect the format
+cpts-tools parse-web outputs/feroxbuster.txt
+cpts-tools parse-web outputs/feroxbuster.json
+cpts-tools parse-web outputs/gobuster.txt
+
+# Filter to specific status codes
+cpts-tools parse-web outputs/feroxbuster.txt --status 200,301,403
+
+# Force a specific parser
+cpts-tools parse-web outputs/scan.txt --input-format feroxbuster
+```
+
+Example output:
+
+```text
+Status  Method  Size  Words  Lines  URL
+------  ------  ----  -----  -----  ----------------------------------
+200     GET     1234  46     4      http://10.10.10.5/admin
+301     GET     0     0      0      http://10.10.10.5/login -> /login/
+403     GET     287   12     2      http://10.10.10.5/.git
+200     GET     4567  62     8      http://10.10.10.5/api/users
+```
+
+gobuster doesn't track word/line counts, so those columns show `-` for gobuster
+input. Feroxbuster's `--json` format is parsed as newline-delimited JSON, with
+non-`response` entries (scan-config, report) filtered out.
 
 ### Make an `/etc/hosts` entry
 
