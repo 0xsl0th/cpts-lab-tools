@@ -27,3 +27,6 @@ outputs/
 evidence/
 *.log
 .env
+
+# Local project instructions — kept local, not published
+CLAUDE.md
