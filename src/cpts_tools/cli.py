@@ -24,6 +24,7 @@ from .render import (
     render_workflow,
 )
 from .services import canonicalize, ports_for
+from .status import format_status, gather_status
 from .workflows import all_ids as all_workflow_ids
 from .workflows import lookup as lookup_workflow
 from .workflows import resolve as resolve_workflows
@@ -653,6 +654,22 @@ def workspace_suggest(
         output=output_path,
         force=force,
     )
+
+
+@workspace_app.command("status")
+def workspace_status(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Workspace path (defaults to the current directory)."),
+    ] = Path("."),
+) -> None:
+    """Summarize a workspace's progress and the suggested next step."""
+    try:
+        status = gather_status(path)
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    typer.echo(format_status(status))
 
 
 @finding_app.command("add")

@@ -268,6 +268,11 @@ def list_findings(workspace_path: Path) -> list[ParsedFinding]:
     return parse_findings(report_path.read_text(encoding="utf-8"))
 
 
+def real_findings(findings: list[ParsedFinding]) -> list[ParsedFinding]:
+    """Drop the scaffold placeholder finding, leaving only operator-recorded ones."""
+    return [f for f in findings if f.title.strip() != _PLACEHOLDER_TITLE]
+
+
 def format_findings_table(findings: list[ParsedFinding]) -> str:
     """Render a short table of findings for terminal output."""
     if not findings:

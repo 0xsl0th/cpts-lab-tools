@@ -16,6 +16,7 @@ python -m pip install -e ".[dev]"
 |---------|--------------|
 | `workspace init` | Scaffold a target folder, metadata file, and a richer report scaffold. |
 | `workspace suggest` | Generate methodology from `scans/` — merges every scan file by default. |
+| `workspace status` | Summarize a workspace — scans, methodology freshness, findings, and the next step. |
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry — no scan or workspace needed. |
 | `make-hosts` | Print an `/etc/hosts` entry plus a copy-paste shell command. Read-only. |
@@ -178,6 +179,37 @@ Multi-scan behavior:
 
 Re-running refuses to overwrite the previous methodology unless `--force` is
 passed; unrelated files in the workspace are never touched.
+
+### Check workspace status
+
+`workspace status` prints a one-screen summary of where a workspace stands —
+scan count, whether methodology has been generated (and whether it is stale
+relative to `scans/`), recorded findings by severity, and a single suggested
+next step.
+
+```bash
+# From inside the workspace, or point at one explicitly.
+cpts-tools workspace status
+cpts-tools workspace status ~/labs/target
+```
+
+```text
+Workspace: target
+Path:      /home/op/labs/target
+
+  Target       10.10.10.5 · app.corp.local · corp.local
+  Platform     lab
+  Scans        1 file (latest: initial.xml)
+  Methodology  notes/methodology/  — STALE (newer scans present)
+  Findings     1 recorded — 1 High
+
+Next: scans/ changed since the methodology was generated — re-run `cpts-tools workspace suggest --force`.
+```
+
+The **Next** line is state-driven: it points at `workspace suggest` when no
+methodology exists yet, flags a stale methodology once newer scans land, and
+nudges toward `finding add` after methodology is in place. It never modifies
+the workspace — `workspace status` is read-only.
 
 ### Record findings into the report
 

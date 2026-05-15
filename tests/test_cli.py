@@ -655,6 +655,26 @@ def test_workspace_suggest_errors_when_no_scan(tmp_path: Path) -> None:
     assert "No scan file" in strip_ansi(result.output)
 
 
+def test_workspace_status_summarizes_fresh_workspace(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    result = runner.invoke(app, ["workspace", "status", str(tmp_path / "target")])
+
+    assert result.exit_code == 0, result.output
+    assert "Workspace: target" in result.output
+    assert "Scans" in result.output
+    assert "none" in result.output
+    assert "Drop an nmap scan" in result.output
+
+
+def test_workspace_status_errors_outside_workspace(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["workspace", "status", str(tmp_path)])
+    assert result.exit_code != 0
+    assert "workspace init" in strip_ansi(result.output)
+
+
 def test_finding_add_records_in_report(tmp_path: Path) -> None:
     runner.invoke(
         app,
