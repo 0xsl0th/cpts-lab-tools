@@ -17,6 +17,7 @@ python -m pip install -e ".[dev]"
 | `workspace init` | Scaffold a target folder, metadata file, and a richer report scaffold. |
 | `workspace suggest` | Generate methodology from `scans/` — merges every scan file by default. |
 | `workspace status` | Summarize a workspace — scans, methodology freshness, findings, and the next step. |
+| `workspace check` | Lint `report.md` for wrap-up readiness — unfilled findings and sections. Exits non-zero on issues. |
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry — no scan or workspace needed. |
 | `make-hosts` | Print an `/etc/hosts` entry plus a copy-paste shell command. Read-only. |
@@ -212,6 +213,38 @@ The **Next** line is state-driven: it points at `workspace suggest` when no
 methodology exists yet, flags a stale methodology once newer scans land, and
 nudges toward `finding add` after methodology is in place. It never modifies
 the workspace — `workspace status` is read-only.
+
+### Check report readiness
+
+`workspace check` lints the workspace's `report.md` and flags the scaffold
+placeholders still left unfilled — per-finding fields (Severity, Description,
+Evidence, Impact, Remediation) and the Executive Summary. It exits non-zero
+when issues remain, so it works as a pre-handover gate or a CI step.
+
+```bash
+# From inside the workspace, or point at one explicitly.
+cpts-tools workspace check
+cpts-tools workspace check ~/labs/target
+```
+
+```text
+Report check: /home/op/labs/target/report.md
+
+Report:
+  - Executive Summary is still the scaffold placeholder.
+
+Findings:
+  Finding 1 — SMB null session enabled
+    - **Impact** is still a scaffold placeholder
+    - **Remediation** is still a scaffold placeholder
+
+3 issues found — fill these in before handing the report over.
+```
+
+`finding add` fills in Severity, Affected, and (with `--service`) Description,
+but Impact and Remediation are always left for you — `workspace check` is the
+reminder that they, and the Executive Summary, still need attention. Like
+`workspace status`, it is read-only.
 
 ### Record findings into the report
 

@@ -25,6 +25,7 @@ from .render import (
     render_obsidian_vault,
     render_workflow,
 )
+from .report import check_report, format_report_check
 from .services import canonicalize, ports_for
 from .status import format_status, gather_status
 from .workflows import all_ids as all_workflow_ids
@@ -715,6 +716,24 @@ def workspace_status(
         raise typer.BadParameter(str(exc)) from exc
 
     typer.echo(format_status(status))
+
+
+@workspace_app.command("check")
+def workspace_check(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Workspace path (defaults to the current directory)."),
+    ] = Path("."),
+) -> None:
+    """Check a workspace report.md for wrap-up readiness (exits non-zero on issues)."""
+    try:
+        check = check_report(path)
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    typer.echo(format_report_check(check))
+    if not check.ok:
+        raise typer.Exit(code=1)
 
 
 @finding_app.command("add")

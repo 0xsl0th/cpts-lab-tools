@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Report check** — `workspace check` lints a workspace's `report.md` for
+  wrap-up readiness, flagging unfilled scaffold placeholders in findings
+  (Severity, Description, Evidence, Impact, Remediation) and the Executive
+  Summary. Exits non-zero when issues remain, so it can gate a handover or CI.
+
 ## [0.3.0] - 2026-05-14
 
 ### Added
@@ -53,5 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   push and pull request across Python 3.11 and 3.13; Ruff added as a dev
   dependency with a basic rule set.
 
+[Unreleased]: https://github.com/0xsl0th/cpts-lab-tools/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/0xsl0th/cpts-lab-tools/releases/tag/v0.3.0
 [0.2.0]: https://github.com/0xsl0th/cpts-lab-tools/releases/tag/v0.2.0

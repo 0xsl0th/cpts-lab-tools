@@ -759,6 +759,72 @@ def test_workspace_status_errors_outside_workspace(tmp_path: Path) -> None:
     assert "workspace init" in strip_ansi(result.output)
 
 
+def test_workspace_check_flags_incomplete_report(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    runner.invoke(
+        app,
+        [
+            "finding", "add",
+            "--title", "SMB null session",
+            "--severity", "high",
+            str(workspace),
+        ],
+    )
+
+    result = runner.invoke(app, ["workspace", "check", str(workspace)])
+    assert result.exit_code == 1
+    assert "Report check:" in result.output
+    assert "Finding 1" in result.output
+
+
+def test_workspace_check_passes_complete_report(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    runner.invoke(
+        app,
+        [
+            "finding", "add",
+            "--title", "SMB null session",
+            "--severity", "high",
+            "--service", "smb",
+            "--evidence", "screenshots/smb.png",
+            str(workspace),
+        ],
+    )
+    report = workspace / "report.md"
+    text = (
+        report.read_text(encoding="utf-8")
+        .replace("_Business or technical impact._", "Anonymous share read.")
+        .replace(
+            "_Specific, actionable fix — not generic advice._",
+            "Require SMB signing.",
+        )
+        .replace(
+            "_Fill after engagement completes — 2-3 sentence summary of "
+            "overall impact._",
+            "Compromised via SMB.",
+        )
+    )
+    report.write_text(text, encoding="utf-8")
+
+    result = runner.invoke(app, ["workspace", "check", str(workspace)])
+    assert result.exit_code == 0, result.output
+    assert "OK" in result.output
+
+
+def test_workspace_check_errors_outside_workspace(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["workspace", "check", str(tmp_path)])
+    assert result.exit_code != 0
+    assert "workspace init" in strip_ansi(result.output)
+
+
 def test_finding_add_records_in_report(tmp_path: Path) -> None:
     runner.invoke(
         app,
