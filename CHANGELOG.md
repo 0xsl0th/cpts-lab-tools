@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   state-driven "next step" hint. Read-only — it never modifies the workspace.
 - **Version flag** — `cpts-tools --version` prints the installed version and
   exits.
+- **JSON output** — `suggest-next` and `workspace suggest` accept
+  `--output-format json`, emitting a structured JSON document (target metadata,
+  detected/unmapped services, and the full per-workflow methodology) for
+  scripting. `workspace suggest --output-format json` writes
+  `notes/methodology.json`.
 
 ## [0.2.0] - 2026-05-14
 

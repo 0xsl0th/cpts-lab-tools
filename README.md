@@ -154,8 +154,9 @@ cpts-tools workspace init target \
 ```
 
 `workspace suggest` merges every scan file in `scans/` (oldest → newest) and
-generates methodology into `notes/methodology/` (Obsidian vault by default) or
-`notes/methodology.md` (with `--output-format md`):
+generates methodology into `notes/methodology/` (Obsidian vault by default),
+`notes/methodology.md` (`--output-format md`), or `notes/methodology.json`
+(`--output-format json`):
 
 ```bash
 # From inside the workspace, no flags needed.
@@ -454,8 +455,22 @@ cpts-tools suggest-next -i scans/target --output-format obsidian -o notes/target
 
 The `md` default behavior (single Markdown file, optional `-o`) is unchanged.
 
-`--output-format` currently accepts `md` and `obsidian`; the option is scaffolded
-so future releases can add `json` output without breaking the CLI shape.
+#### JSON output
+
+`--output-format json` writes a single structured JSON document instead of
+Markdown or a vault: target metadata, detected and unmapped services, and the
+full prioritized per-workflow methodology (checklists, commands, troubleshooting,
+report notes) as data. Like `md`, it prints to stdout when `-o` is omitted.
+
+```bash
+# To a file, or piped into jq for scripting.
+cpts-tools suggest-next -i scans/target --output-format json -o outputs/methodology.json
+cpts-tools suggest-next -i scans/target --output-format json | jq '.workflows[].service_id'
+```
+
+Target placeholders (`[TARGET_IP]`, `[TARGET_HOST]`, `[DOMAIN]`) are substituted;
+operator placeholders (`[USER]`, `[PASS]`, ...) are left intact for downstream
+tooling. `--output-format` accepts `md`, `json`, and `obsidian`.
 
 ## Development
 

@@ -1,3 +1,4 @@
+import json
 import re
 import time
 from pathlib import Path
@@ -277,6 +278,41 @@ def test_suggest_next_writes_to_output_file(tmp_path: Path) -> None:
     content = out_path.read_text(encoding="utf-8")
     assert "# Methodology — 10.10.10.5" in content
     assert f"Wrote methodology to {out_path}" in result.output
+
+
+def test_suggest_next_json_output_to_stdout() -> None:
+    result = runner.invoke(
+        app,
+        ["suggest-next", "-i", str(FIXTURE_XML), "--output-format", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["target"]["ip"] == "10.10.10.5"
+    assert any(w["service_id"] == "smb" for w in data["workflows"])
+    assert data["unmapped_services"]  # fixture has a port without a workflow
+
+
+def test_suggest_next_json_output_to_file(tmp_path: Path) -> None:
+    out_path = tmp_path / "methodology.json"
+    result = runner.invoke(
+        app,
+        [
+            "suggest-next",
+            "-i",
+            str(FIXTURE_XML),
+            "--output-format",
+            "json",
+            "-o",
+            str(out_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert out_path.is_file()
+    data = json.loads(out_path.read_text(encoding="utf-8"))
+    assert data["target"]["ip"] == "10.10.10.5"
+    assert f"Wrote methodology JSON to {out_path}" in result.output
 
 
 def test_suggest_next_defaults_target_ip_from_scan() -> None:
@@ -645,6 +681,29 @@ def test_workspace_suggest_md_mode_writes_single_file(tmp_path: Path) -> None:
     single = workspace / "notes" / "methodology.md"
     assert single.is_file()
     assert "# Methodology — 10.10.10.5" in single.read_text(encoding="utf-8")
+
+
+def test_workspace_suggest_json_mode_writes_methodology_json(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    (workspace / "scans" / "initial.xml").write_text(
+        FIXTURE_XML.read_text(), encoding="utf-8"
+    )
+
+    result = runner.invoke(
+        app,
+        ["workspace", "suggest", str(workspace), "--output-format", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    out_path = workspace / "notes" / "methodology.json"
+    assert out_path.is_file()
+    data = json.loads(out_path.read_text(encoding="utf-8"))
+    assert data["target"]["ip"] == "10.10.10.5"
+    assert any(w["service_id"] == "smb" for w in data["workflows"])
 
 
 def test_workspace_suggest_errors_when_no_metadata(tmp_path: Path) -> None:

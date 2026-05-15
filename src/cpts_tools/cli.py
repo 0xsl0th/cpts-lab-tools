@@ -20,6 +20,7 @@ from .nmap import (
 )
 from .render import (
     TargetContext,
+    render_json,
     render_methodology,
     render_obsidian_vault,
     render_workflow,
@@ -85,6 +86,7 @@ class InputFormat(str, Enum):
 class OutputFormat(str, Enum):
     MD = "md"
     OBSIDIAN = "obsidian"
+    JSON = "json"
 
 
 _SUFFIX_TO_FORMAT: dict[str, InputFormat] = {
@@ -185,30 +187,37 @@ def _render_suggest_from_services(
         unmapped=tuple(unmapped),
     )
 
-    if output_format is OutputFormat.MD:
-        markdown = render_methodology(context, workflows)
-        if output is not None:
-            output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_text(markdown, encoding="utf-8")
-            typer.echo(f"Wrote methodology to {output}")
-        else:
-            typer.echo(markdown)
+    if output_format is OutputFormat.OBSIDIAN:
+        assert output is not None  # guarded above
+        files = render_obsidian_vault(context, workflows)
+        output.mkdir(parents=True, exist_ok=True)
+        existing = [output / rel for rel in files if (output / rel).exists()]
+        if existing and not force:
+            joined = "\n  ".join(str(p) for p in existing)
+            raise typer.BadParameter(
+                "Vault files already exist (pass --force to overwrite):\n  " + joined
+            )
+        for rel, content in files.items():
+            target_path = output / rel
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_text(content, encoding="utf-8")
+        typer.echo(f"Wrote Obsidian vault to {output} ({len(files)} files)")
         return
 
-    assert output is not None  # guarded above
-    files = render_obsidian_vault(context, workflows)
-    output.mkdir(parents=True, exist_ok=True)
-    existing = [output / rel for rel in files if (output / rel).exists()]
-    if existing and not force:
-        joined = "\n  ".join(str(p) for p in existing)
-        raise typer.BadParameter(
-            "Vault files already exist (pass --force to overwrite):\n  " + joined
-        )
-    for rel, content in files.items():
-        target_path = output / rel
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_text(content, encoding="utf-8")
-    typer.echo(f"Wrote Obsidian vault to {output} ({len(files)} files)")
+    # Single-document formats: md and json.
+    if output_format is OutputFormat.JSON:
+        rendered = render_json(context, workflows)
+        label = "methodology JSON"
+    else:
+        rendered = render_methodology(context, workflows)
+        label = "methodology"
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(rendered, encoding="utf-8")
+        typer.echo(f"Wrote {label} to {output}")
+    else:
+        typer.echo(rendered)
 
 
 def _run_suggest(
@@ -476,9 +485,9 @@ def suggest_next(
         typer.Option(
             "--output-format",
             help=(
-                "Output format. `md` writes a single Markdown file; `obsidian` "
-                "writes a vault folder (index, per-service notes, optional "
-                "unmapped note)."
+                "Output format. `md` writes a single Markdown file; `json` "
+                "writes a structured JSON document; `obsidian` writes a vault "
+                "folder (index, per-service notes, optional unmapped note)."
             ),
         ),
     ] = OutputFormat.MD,
@@ -488,9 +497,9 @@ def suggest_next(
             "--output",
             "-o",
             help=(
-                "For `md`: write the rendered methodology to this file (stdout "
-                "if omitted). For `obsidian`: required, a vault directory to "
-                "populate."
+                "For `md` and `json`: write the rendered document to this file "
+                "(stdout if omitted). For `obsidian`: required, a vault "
+                "directory to populate."
             ),
         ),
     ] = None,
@@ -589,8 +598,9 @@ def workspace_suggest(
         typer.Option(
             "--output-format",
             help=(
-                "Methodology output format. Default `obsidian` writes a vault under "
-                "notes/methodology/; `md` writes a single notes/methodology.md."
+                "Methodology output format. Default `obsidian` writes a vault "
+                "under notes/methodology/; `md` writes notes/methodology.md; "
+                "`json` writes notes/methodology.json."
             ),
         ),
     ] = OutputFormat.OBSIDIAN,
@@ -664,6 +674,8 @@ def workspace_suggest(
 
     if output_format is OutputFormat.OBSIDIAN:
         output_path: Path = path / "notes" / "methodology"
+    elif output_format is OutputFormat.JSON:
+        output_path = path / "notes" / "methodology.json"
     else:
         output_path = path / "notes" / "methodology.md"
 

@@ -1,5 +1,6 @@
-"""Render a methodology document (single Markdown file or Obsidian vault)."""
+"""Render a methodology document (Markdown file, Obsidian vault, or JSON)."""
 
+import json
 from dataclasses import dataclass
 
 from .workflows import Workflow, by_category
@@ -408,3 +409,64 @@ def render_obsidian_vault(
     if context.unmapped:
         files["unmapped.md"] = _render_unmapped(context)
     return files
+
+
+def _workflow_to_dict(workflow: Workflow, context: TargetContext) -> dict:
+    """Structured, placeholder-substituted representation of one workflow."""
+
+    def sub(text: str) -> str:
+        return _apply_placeholders(text, context)
+
+    return {
+        "service_id": workflow.service_id,
+        "display_name": workflow.display_name,
+        "category": workflow.category,
+        "priority": workflow.priority,
+        "title": sub(workflow.title),
+        "when_to_use": sub(workflow.when_to_use),
+        "checklist": [sub(item) for item in workflow.checklist],
+        "commands": [
+            {"command": sub(cmd), "outcome": sub(outcome)}
+            for cmd, outcome in workflow.commands
+        ],
+        "expected_output": sub(workflow.expected_output),
+        "verification": [sub(item) for item in workflow.verification],
+        "troubleshooting": [
+            {"problem": sub(problem), "cause": sub(cause), "fix": sub(fix)}
+            for problem, cause, fix in workflow.troubleshooting
+        ],
+        "report_note": sub(workflow.report_note),
+        "related": list(workflow.related),
+    }
+
+
+def render_json(context: TargetContext, workflows: list[Workflow]) -> str:
+    """Return the methodology as a structured, machine-readable JSON document.
+
+    Mirrors the Markdown/Obsidian content as data: target metadata, detected and
+    unmapped services, the prioritized per-workflow methodology, and the
+    post-foothold follow-ups. Target placeholders are substituted; operator
+    placeholders ([USER], [PASS], ...) are left intact, as in the other formats.
+    """
+    after_foothold: list[dict[str, str]] = []
+    for category in _POST_FOOTHOLD_CATEGORIES:
+        for workflow in by_category(category):
+            after_foothold.append(
+                {
+                    "service_id": workflow.service_id,
+                    "title": _apply_placeholders(workflow.title, context),
+                }
+            )
+
+    data = {
+        "target": {
+            "ip": context.target_ip,
+            "host": context.target_host,
+            "domain": context.domain,
+        },
+        "detected_services": [dict(svc) for svc in context.detected],
+        "unmapped_services": [dict(svc) for svc in context.unmapped],
+        "workflows": [_workflow_to_dict(w, context) for w in workflows],
+        "after_foothold": after_foothold,
+    }
+    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
