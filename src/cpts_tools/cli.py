@@ -371,6 +371,15 @@ def make_hosts(
     typer.echo(f'echo "{line}" | sudo tee -a /etc/hosts')
 
 
+def _warn_deprecated(command: str, replacement: str) -> None:
+    """Emit a deprecation notice to stderr, keeping stdout output clean."""
+    typer.echo(
+        f"warning: `{command}` is deprecated and will be removed in a future "
+        f"release; use {replacement} instead.",
+        err=True,
+    )
+
+
 @app.command("report-init")
 def report_init(
     machine: Annotated[str, typer.Argument(help="Machine name for the report folder.")],
@@ -385,7 +394,8 @@ def report_init(
         ),
     ] = Path("."),
 ) -> None:
-    """Create a machine report folder structure."""
+    """[DEPRECATED] Create a machine report folder structure. Use `workspace init` instead."""
+    _warn_deprecated("report-init", "`workspace init`")
     machine_dir = output_dir / machine
     for folder in ("scans", "screenshots", "loot", "notes"):
         (machine_dir / folder).mkdir(parents=True, exist_ok=True)
@@ -414,7 +424,8 @@ def obsidian_note(
         typer.Option("--ip", help="Optional authorized lab target IP."),
     ] = None,
 ) -> None:
-    """Generate a Markdown machine note template."""
+    """[DEPRECATED] Generate a Markdown machine note template. Use `workspace init` + `workspace suggest` instead."""
+    _warn_deprecated("obsidian-note", "`workspace init` + `workspace suggest`")
     ip_value = target_ip or "TBD"
     typer.echo(
         f"# {machine}\n\n"

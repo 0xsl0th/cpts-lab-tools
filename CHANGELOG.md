@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scripting. `workspace suggest --output-format json` writes
   `notes/methodology.json`.
 
+### Deprecated
+
+- `report-init` and `obsidian-note` are deprecated in favor of `workspace init`
+  / `workspace suggest`. Both still work, but now print a deprecation notice on
+  stderr and are planned for removal in a future release.
+
 ## [0.2.0] - 2026-05-14
 
 ### Added
