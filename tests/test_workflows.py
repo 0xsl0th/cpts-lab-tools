@@ -92,6 +92,18 @@ def test_by_category_unknown_returns_empty() -> None:
     assert by_category("does-not-exist") == []
 
 
+def test_extended_service_enum_workflows_exist() -> None:
+    """Oracle, IMAP/POP3, rsync, Redis, VNC each have a fully populated workflow."""
+    for sid in ("oracle", "imap-pop3", "rsync", "redis", "vnc"):
+        workflow = lookup(sid)
+        assert workflow is not None, f"missing workflow: {sid}"
+        assert workflow.category == "service-enum"
+        assert workflow.checklist
+        assert workflow.commands
+        assert workflow.troubleshooting
+        assert workflow.report_note
+
+
 def test_post_foothold_workflows_are_not_canonical_services() -> None:
     # They must not be reachable via canonicalize / resolve from a scan.
     canonical = set(_NAME_MAP.keys()) | set(_PORT_MAP.keys())

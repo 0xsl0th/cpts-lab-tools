@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Five new service-enum workflows** — Oracle TNS (1521), IMAP/POP3 (110/143/
+  993/995), rsync (873), Redis (6379), and VNC (5900). Each provides the full
+  workflow shape — checklist, commands, expected output, verification,
+  troubleshooting, report note — with lab-safe placeholders. Three are grounded
+  in the field-manual reference (Oracle, IMAP/POP3, rsync); two cover common
+  pentest methodology (Redis, VNC). The registry now covers 20 service-enum
+  workflows.
+
 ## [0.4.0] - 2026-05-15
 
 ### Added
@@ -74,6 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   push and pull request across Python 3.11 and 3.13; Ruff added as a dev
   dependency with a basic rule set.
 
+[Unreleased]: https://github.com/0xsl0th/reconlab/compare/v0.4.0...HEAD
 [0.4.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.4.0
 [0.3.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.3.0
 [0.2.0]: https://github.com/0xsl0th/reconlab/releases/tag/v0.2.0

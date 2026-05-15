@@ -454,7 +454,8 @@ Excerpt of the default `md` output:
 ```
 
 Supported service-enum workflows in this release: SMB, HTTP, HTTPS, FTP, SSH,
-DNS, SMTP, LDAP, Kerberos, MSSQL, MySQL, RDP, WinRM, SNMP, NFS (15 total), plus
+DNS, SMTP, LDAP, Kerberos, MSSQL, MySQL, Oracle, RDP, WinRM, SNMP, NFS, rsync,
+Redis, VNC, IMAP/POP3 (20 total), plus
 three post-foothold workflows — `linux-privesc`, `windows-privesc`,
 `ad-foothold` — and one lateral-movement workflow, `pivoting`. Run
 `reconlab workflow list` for the live registry with

@@ -38,3 +38,20 @@ def test_canonicalize_returns_none_for_unmapped() -> None:
 def test_canonicalize_handles_non_numeric_port() -> None:
     assert canonicalize(None, "not-a-port", "tcp") is None
     assert canonicalize(None, None, "tcp") is None
+
+
+def test_canonicalize_extended_services_by_name() -> None:
+    assert canonicalize("oracle-tns", 1521, "tcp") == "oracle"
+    assert canonicalize("imap", 143, "tcp") == "imap-pop3"
+    assert canonicalize("pop3s", 995, "tcp") == "imap-pop3"
+    assert canonicalize("rsync", 873, "tcp") == "rsync"
+    assert canonicalize("redis", 6379, "tcp") == "redis"
+    assert canonicalize("vnc", 5900, "tcp") == "vnc"
+
+
+def test_canonicalize_extended_services_by_port() -> None:
+    assert canonicalize(None, 1521, "tcp") == "oracle"
+    assert canonicalize(None, 110, "tcp") == "imap-pop3"
+    assert canonicalize(None, 873, "tcp") == "rsync"
+    assert canonicalize(None, 6379, "tcp") == "redis"
+    assert canonicalize(None, 5901, "tcp") == "vnc"

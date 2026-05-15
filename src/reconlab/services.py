@@ -16,6 +16,11 @@ _NAME_MAP: dict[str, set[str]] = {
     "winrm": {"wsman", "winrm"},
     "snmp": {"snmp"},
     "nfs": {"nfs", "nfs_acl"},
+    "oracle": {"oracle-tns", "oracle"},
+    "imap-pop3": {"imap", "imaps", "pop3", "pop3s"},
+    "rsync": {"rsync"},
+    "redis": {"redis"},
+    "vnc": {"vnc"},
 }
 
 _PORT_MAP: dict[str, set[tuple[int, str]]] = {
@@ -34,6 +39,11 @@ _PORT_MAP: dict[str, set[tuple[int, str]]] = {
     "winrm": {(5985, "tcp"), (5986, "tcp")},
     "snmp": {(161, "udp")},
     "nfs": {(2049, "tcp")},
+    "oracle": {(1521, "tcp")},
+    "imap-pop3": {(110, "tcp"), (143, "tcp"), (993, "tcp"), (995, "tcp")},
+    "rsync": {(873, "tcp")},
+    "redis": {(6379, "tcp")},
+    "vnc": {(5900, "tcp"), (5901, "tcp")},
 }
 
 _NAME_INDEX: dict[str, str] = {
