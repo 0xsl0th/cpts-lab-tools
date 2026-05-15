@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wrap-up readiness, flagging unfilled scaffold placeholders in findings
   (Severity, Description, Evidence, Impact, Remediation) and the Executive
   Summary. Exits non-zero when issues remain, so it can gate a handover or CI.
+- **PyPI distribution** — the project is now packaged for PyPI with full
+  metadata (license, classifiers, URLs) and a trusted-publishing GitHub
+  Actions workflow that auto-publishes on each GitHub release. Install via
+  `pipx install reconlab` or `pip install reconlab`. MIT licensed.
 
 ### Changed
 

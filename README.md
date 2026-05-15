@@ -4,7 +4,19 @@ Minimal Python CLI helpers for authorized penetration-testing lab work. The proj
 
 ## Install
 
+### From PyPI (recommended)
+
 ```bash
+pipx install reconlab        # isolated install, recommended for CLI tools
+# or:
+pip install reconlab         # if you already manage your own Python env
+```
+
+### From source (for development)
+
+```bash
+git clone https://github.com/0xsl0th/reconlab.git
+cd reconlab
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
