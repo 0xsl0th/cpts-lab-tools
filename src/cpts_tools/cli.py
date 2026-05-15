@@ -5,6 +5,7 @@ from xml.etree import ElementTree
 
 import typer
 
+from . import __version__
 from .findings import (
     Severity,
     add_finding,
@@ -51,6 +52,27 @@ workflow_app = typer.Typer(
 app.add_typer(workspace_app, name="workspace")
 app.add_typer(finding_app, name="finding")
 app.add_typer(workflow_app, name="workflow")
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"cpts-tools {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def main(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            help="Show the cpts-tools version and exit.",
+            is_eager=True,
+            callback=_version_callback,
+        ),
+    ] = False,
+) -> None:
+    """Minimal helpers for authorized penetration-testing lab organization and reporting."""
 
 
 class InputFormat(str, Enum):

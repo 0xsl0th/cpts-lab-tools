@@ -4,6 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
+from cpts_tools import __version__
 from cpts_tools.cli import app
 
 runner = CliRunner()
@@ -19,6 +20,13 @@ _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 def strip_ansi(text: str) -> str:
     """Return *text* with ANSI escape sequences removed."""
     return _ANSI_RE.sub("", text)
+
+
+def test_version_flag_prints_version_and_exits() -> None:
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "cpts-tools" in result.output
+    assert __version__ in result.output
 
 
 def test_parse_nmap_prints_open_service_summary(tmp_path: Path) -> None:

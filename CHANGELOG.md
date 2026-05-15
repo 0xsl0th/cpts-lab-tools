@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scan count and latest scan, whether methodology has been generated and whether
   it is stale relative to `scans/`, recorded findings by severity, and a single
   state-driven "next step" hint. Read-only — it never modifies the workspace.
+- **Version flag** — `cpts-tools --version` prints the installed version and
+  exits.
 
 ## [0.2.0] - 2026-05-14
 

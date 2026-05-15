@@ -24,7 +24,8 @@ python -m pip install -e ".[dev]"
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
 | `report-init` / `obsidian-note` | Legacy single-target scaffolds; prefer `workspace init`. |
 
-Run `cpts-tools --help` (or `cpts-tools <command> --help`) for full option lists.
+Run `cpts-tools --help` (or `cpts-tools <command> --help`) for full option
+lists, or `cpts-tools --version` to print the installed version.
 
 ## Lab session walkthrough
 
