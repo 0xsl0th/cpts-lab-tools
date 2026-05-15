@@ -1,4 +1,4 @@
-"""Service workflow registry — paraphrased CPTS/HTB methodology, lab-safe placeholders.
+"""Service workflow registry — paraphrased pentest methodology, lab-safe placeholders.
 
 Workflows are inlined as a single registry so the entire methodology surface lives in
 one auditable file. Each workflow uses placeholders ([TARGET_IP], [TARGET_HOST],

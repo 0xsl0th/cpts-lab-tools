@@ -35,7 +35,7 @@ from .workspace import (
 )
 
 app = typer.Typer(
-    help="Minimal helpers for authorized HTB/CPTS lab organization and reporting."
+    help="Minimal helpers for authorized penetration-testing lab organization and reporting."
 )
 workspace_app = typer.Typer(
     help="Manage lab workspaces (folders, metadata, scan-driven methodology)."
@@ -317,7 +317,7 @@ def make_hosts(
         if not positional:
             raise typer.BadParameter(
                 "Provide an IP and at least one hostname, "
-                "e.g. `make-hosts 10.10.10.5 target.htb` or `--ip ... --host ...`."
+                "e.g. `make-hosts 10.10.10.5 app.corp.local` or `--ip ... --host ...`."
             )
         if len(positional) < 2:
             raise typer.BadParameter(
@@ -364,7 +364,7 @@ def report_init(
             f"# {machine}\n\n"
             "## Summary\n\n"
             "## Scope\n\n"
-            "- Authorized HTB/CPTS lab target only.\n\n"
+            "- Authorized penetration-testing lab target only.\n\n"
             "## Enumeration\n\n"
             "## Findings\n\n"
             "## Lessons Learned\n",
@@ -388,12 +388,12 @@ def obsidian_note(
         f"# {machine}\n\n"
         "## Metadata\n\n"
         f"- Target IP: {ip_value}\n"
-        "- Platform: HTB/CPTS Lab\n"
+        "- Platform: Lab\n"
         "- Status: In progress\n"
         "- Scope: Authorized lab target only\n\n"
         "## Hostnames\n\n"
         "```text\n"
-        f"{ip_value} {machine.lower()}.htb\n"
+        f"{ip_value} {machine.lower()}.corp.local\n"
         "```\n\n"
         "## Enumeration\n\n"
         "### Nmap\n\n"
@@ -512,8 +512,8 @@ def workspace_init(
     ] = None,
     platform: Annotated[
         str,
-        typer.Option("--platform", help="Lab platform tag (htb, cpts, thm, other)."),
-    ] = "htb",
+        typer.Option("--platform", help="Free-form lab platform tag (e.g. lab, ctf, client)."),
+    ] = "lab",
     output_dir: Annotated[
         Path,
         typer.Option(

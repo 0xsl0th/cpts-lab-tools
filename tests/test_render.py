@@ -5,8 +5,8 @@ from cpts_tools.workflows import lookup, resolve
 def _ctx(**overrides):
     base = dict(
         target_ip="10.10.10.5",
-        target_host="target.htb",
-        domain="target.htb",
+        target_host="target.corp.local",
+        domain="target.corp.local",
         detected=(),
         unmapped=(),
     )
@@ -49,7 +49,7 @@ def test_render_substitutes_known_placeholders() -> None:
     assert "[TARGET_HOST]" not in output
     assert "[DOMAIN]" not in output
     assert "10.10.10.5" in output
-    assert "target.htb" in output
+    assert "target.corp.local" in output
 
 
 def test_render_leaves_operator_placeholders_untouched() -> None:
@@ -83,7 +83,7 @@ def test_render_lists_detected_services_in_table() -> None:
     detected = (
         {
             "host": "10.10.10.5",
-            "hostnames": "target.htb",
+            "hostnames": "target.corp.local",
             "port": "445",
             "proto": "tcp",
             "service": "microsoft-ds",

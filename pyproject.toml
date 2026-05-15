@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "cpts-lab-tools"
 version = "0.2.0"
-description = "Minimal CLI helpers for authorized HTB/CPTS lab organization and reporting."
+description = "Minimal CLI helpers for authorized penetration-testing lab organization and reporting."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

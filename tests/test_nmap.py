@@ -45,7 +45,7 @@ def test_parse_nmap_normal_returns_only_open_ports() -> None:
     services = parse_nmap_normal(NORMAL_FIXTURE)
     assert _ports(services) == EXPECTED_OPEN_PORTS
     assert all(s["host"] == "10.10.10.5" for s in services)
-    assert all(s["hostnames"] == "target.htb" for s in services)
+    assert all(s["hostnames"] == "target.corp.local" for s in services)
 
 
 def test_parse_nmap_normal_extracts_service_and_version() -> None:
@@ -103,9 +103,9 @@ def test_parse_nmap_normal_handles_host_without_resolved_name(tmp_path: Path) ->
 def test_parse_nmap_normal_supports_multiple_hosts(tmp_path: Path) -> None:
     sample = tmp_path / "multi.nmap"
     sample.write_text(
-        "Nmap scan report for a.htb (10.10.10.5)\n"
+        "Nmap scan report for a.corp.local (10.10.10.5)\n"
         "22/tcp open ssh OpenSSH 9.0\n"
-        "Nmap scan report for b.htb (10.10.10.6)\n"
+        "Nmap scan report for b.corp.local (10.10.10.6)\n"
         "80/tcp open http nginx 1.18.0\n",
         encoding="utf-8",
     )
@@ -113,16 +113,16 @@ def test_parse_nmap_normal_supports_multiple_hosts(tmp_path: Path) -> None:
     services = parse_nmap_normal(sample)
     by_port = {s["port"]: s for s in services}
     assert by_port["22"]["host"] == "10.10.10.5"
-    assert by_port["22"]["hostnames"] == "a.htb"
+    assert by_port["22"]["hostnames"] == "a.corp.local"
     assert by_port["80"]["host"] == "10.10.10.6"
-    assert by_port["80"]["hostnames"] == "b.htb"
+    assert by_port["80"]["hostnames"] == "b.corp.local"
 
 
 def test_parse_nmap_grepable_returns_only_open_ports() -> None:
     services = parse_nmap_grepable(GREPABLE_FIXTURE)
     assert _ports(services) == EXPECTED_OPEN_PORTS
     assert all(s["host"] == "10.10.10.5" for s in services)
-    assert all(s["hostnames"] == "target.htb" for s in services)
+    assert all(s["hostnames"] == "target.corp.local" for s in services)
 
 
 def test_parse_nmap_grepable_extracts_service_and_version() -> None:

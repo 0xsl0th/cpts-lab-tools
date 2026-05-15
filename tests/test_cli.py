@@ -29,7 +29,7 @@ def test_parse_nmap_prints_open_service_summary(tmp_path: Path) -> None:
   <host>
     <address addr="10.10.10.5" addrtype="ipv4"/>
     <hostnames>
-      <hostname name="target.htb" type="user"/>
+      <hostname name="target.corp.local" type="user"/>
     </hostnames>
     <ports>
       <port protocol="tcp" portid="22">
@@ -51,7 +51,7 @@ def test_parse_nmap_prints_open_service_summary(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "10.10.10.5" in result.output
-    assert "target.htb" in result.output
+    assert "target.corp.local" in result.output
     assert "80" in result.output
     assert "http" in result.output
     assert "nginx" in result.output
@@ -85,15 +85,15 @@ def test_parse_nmap_handles_no_open_services(tmp_path: Path) -> None:
 def test_make_hosts_positional_prints_hosts_entry_and_shell_command() -> None:
     result = runner.invoke(
         app,
-        ["make-hosts", "10.10.10.5", "target.htb", "www.target.htb"],
+        ["make-hosts", "10.10.10.5", "target.corp.local", "www.target.corp.local"],
     )
 
     assert result.exit_code == 0
     assert "# Add this to /etc/hosts:" in result.output
-    assert "10.10.10.5 target.htb www.target.htb" in result.output
+    assert "10.10.10.5 target.corp.local www.target.corp.local" in result.output
     assert "# Or run:" in result.output
     assert (
-        'echo "10.10.10.5 target.htb www.target.htb" | sudo tee -a /etc/hosts'
+        'echo "10.10.10.5 target.corp.local www.target.corp.local" | sudo tee -a /etc/hosts'
         in result.output
     )
 
@@ -101,12 +101,12 @@ def test_make_hosts_positional_prints_hosts_entry_and_shell_command() -> None:
 def test_make_hosts_flag_form_works() -> None:
     result = runner.invoke(
         app,
-        ["make-hosts", "--ip", "10.10.10.5", "--host", "target.htb"],
+        ["make-hosts", "--ip", "10.10.10.5", "--host", "target.corp.local"],
     )
 
     assert result.exit_code == 0
-    assert "10.10.10.5 target.htb" in result.output
-    assert 'echo "10.10.10.5 target.htb" | sudo tee -a /etc/hosts' in result.output
+    assert "10.10.10.5 target.corp.local" in result.output
+    assert 'echo "10.10.10.5 target.corp.local" | sudo tee -a /etc/hosts' in result.output
 
 
 def test_make_hosts_flag_form_with_repeated_aliases() -> None:
@@ -117,16 +117,16 @@ def test_make_hosts_flag_form_with_repeated_aliases() -> None:
             "--ip",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "--aliases",
-            "dev.target.htb",
+            "dev.target.corp.local",
             "--aliases",
-            "DEV.target.htb",
+            "DEV.target.corp.local",
         ],
     )
 
     assert result.exit_code == 0
-    assert "10.10.10.5 target.htb dev.target.htb DEV.target.htb" in result.output
+    assert "10.10.10.5 target.corp.local dev.target.corp.local DEV.target.corp.local" in result.output
 
 
 def test_make_hosts_flag_form_collects_trailing_positional_aliases() -> None:
@@ -139,17 +139,17 @@ def test_make_hosts_flag_form_collects_trailing_positional_aliases() -> None:
             "--ip",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "--aliases",
-            "dev.target.htb",
-            "Dev.target.htb",
-            "DEV.target.htb",
+            "dev.target.corp.local",
+            "Dev.target.corp.local",
+            "DEV.target.corp.local",
         ],
     )
 
     assert result.exit_code == 0
     assert (
-        "10.10.10.5 target.htb dev.target.htb Dev.target.htb DEV.target.htb"
+        "10.10.10.5 target.corp.local dev.target.corp.local Dev.target.corp.local DEV.target.corp.local"
         in result.output
     )
 
@@ -157,12 +157,12 @@ def test_make_hosts_flag_form_collects_trailing_positional_aliases() -> None:
 def test_make_hosts_preserves_alias_casing() -> None:
     result = runner.invoke(
         app,
-        ["make-hosts", "10.10.10.5", "target.htb", "Dev.target.htb", "DEV.target.htb"],
+        ["make-hosts", "10.10.10.5", "target.corp.local", "Dev.target.corp.local", "DEV.target.corp.local"],
     )
 
     assert result.exit_code == 0
-    assert "Dev.target.htb" in result.output
-    assert "DEV.target.htb" in result.output
+    assert "Dev.target.corp.local" in result.output
+    assert "DEV.target.corp.local" in result.output
 
 
 def test_make_hosts_no_args_errors() -> None:
@@ -178,7 +178,7 @@ def test_make_hosts_only_ip_errors() -> None:
 
 
 def test_make_hosts_flag_form_requires_ip() -> None:
-    result = runner.invoke(app, ["make-hosts", "--host", "target.htb"])
+    result = runner.invoke(app, ["make-hosts", "--host", "target.corp.local"])
     assert result.exit_code != 0
     assert "--host and --aliases require --ip" in strip_ansi(result.output)
 
@@ -231,9 +231,9 @@ def test_suggest_next_prints_methodology_to_stdout() -> None:
             "--target",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "--domain",
-            "target.htb",
+            "target.corp.local",
         ],
     )
 
@@ -399,9 +399,9 @@ def test_suggest_next_obsidian_writes_vault_tree(tmp_path: Path) -> None:
             "--target",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "--domain",
-            "target.htb",
+            "target.corp.local",
             "--output-format",
             "obsidian",
             "-o",
@@ -546,9 +546,9 @@ def test_workspace_init_creates_layout_and_report(tmp_path: Path) -> None:
             "--ip",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "--domain",
-            "target.htb",
+            "target.corp.local",
             "-o",
             str(tmp_path),
         ],
@@ -595,9 +595,9 @@ def test_workspace_suggest_generates_methodology_from_latest_scan(
             "--ip",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "--domain",
-            "target.htb",
+            "target.corp.local",
             "-o",
             str(tmp_path),
         ],
@@ -615,7 +615,7 @@ def test_workspace_suggest_generates_methodology_from_latest_scan(
     assert (vault / "services" / "smb.md").is_file()
     index = (vault / "index.md").read_text(encoding="utf-8")
     assert "10.10.10.5" in index
-    assert "target.htb" in index
+    assert "target.corp.local" in index
 
 
 def test_workspace_suggest_md_mode_writes_single_file(tmp_path: Path) -> None:
@@ -665,7 +665,7 @@ def test_finding_add_records_in_report(tmp_path: Path) -> None:
             "--ip",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "-o",
             str(tmp_path),
         ],
@@ -862,9 +862,9 @@ def test_workflow_show_substitutes_target_placeholders() -> None:
             "--ip",
             "10.10.10.5",
             "--host",
-            "target.htb",
+            "target.corp.local",
             "--domain",
-            "target.htb",
+            "target.corp.local",
         ],
     )
 
@@ -938,12 +938,12 @@ def test_workflow_show_windows_privesc_without_workspace() -> None:
 def test_workflow_show_ad_foothold_substitutes_domain() -> None:
     result = runner.invoke(
         app,
-        ["workflow", "show", "ad-foothold", "--domain", "target.htb"],
+        ["workflow", "show", "ad-foothold", "--domain", "target.corp.local"],
     )
 
     assert result.exit_code == 0, result.output
     assert "Active Directory Foothold" in result.output
-    assert "target.htb" in result.output
+    assert "target.corp.local" in result.output
     assert "[DOMAIN]" not in result.output
     # Operator placeholders preserved.
     assert "[USER]" in result.output
@@ -1016,7 +1016,7 @@ def test_workspace_suggest_merges_all_scans_by_default(tmp_path: Path) -> None:
     tcp.write_text(
         '<nmaprun>'
         '<host><address addr="10.10.10.5" addrtype="ipv4"/>'
-        '<hostnames><hostname name="target.htb" type="user"/></hostnames>'
+        '<hostnames><hostname name="target.corp.local" type="user"/></hostnames>'
         '<ports>'
         '<port protocol="tcp" portid="80">'
         '<state state="open"/><service name="http" product="nginx"/>'

@@ -138,7 +138,7 @@ def render_methodology(context: TargetContext, workflows: list[Workflow]) -> str
     lines.append("## Scope & Assumptions")
     lines.append("")
     lines.append(
-        "- Authorized HTB/CPTS lab target only — do not run these commands against systems you are not explicitly permitted to test."
+        "- Authorized penetration-testing lab target only — do not run these commands against systems you are not explicitly permitted to test."
     )
     lines.append(f"- Target IP: `{context.target_ip}`")
     lines.append(f"- Target host: `{host_line}`")
@@ -318,7 +318,7 @@ def _render_index(context: TargetContext, workflows: list[Workflow], has_unmappe
     lines.append("## Scope & Assumptions")
     lines.append("")
     lines.append(
-        "- Authorized HTB/CPTS lab target only — do not run these commands against systems you are not explicitly permitted to test."
+        "- Authorized penetration-testing lab target only — do not run these commands against systems you are not explicitly permitted to test."
     )
     lines.append(f"- Target IP: `{context.target_ip}`")
     lines.append(f"- Target host: `{host_line}`")

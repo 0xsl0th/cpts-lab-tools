@@ -17,9 +17,9 @@ from cpts_tools.workspace import WorkspaceMetadata, init_workspace
 def _workspace(tmp_path: Path, **overrides) -> Path:
     base = dict(
         target_ip="10.10.10.5",
-        target_host="target.htb",
-        domain="target.htb",
-        platform="htb",
+        target_host="target.corp.local",
+        domain="target.corp.local",
+        platform="lab",
     )
     base.update(overrides)
     workspace = tmp_path / "target"
@@ -36,8 +36,8 @@ def test_render_finding_block_includes_required_fields() -> None:
     metadata = WorkspaceMetadata(
         name="target",
         target_ip="10.10.10.5",
-        target_host="target.htb",
-        domain="target.htb",
+        target_host="target.corp.local",
+        domain="target.corp.local",
     )
     finding = Finding(
         number=1,
@@ -54,7 +54,7 @@ def test_render_finding_block_includes_required_fields() -> None:
     assert "### Finding 1 — SMB null session enabled" in text
     assert "**Severity:** High" in text
     assert "`10.10.10.5`" in text
-    assert "(`target.htb`)" in text
+    assert "(`target.corp.local`)" in text
     assert "`smb:445`" in text
     assert "`screenshots/shares.png`" in text
     # Workflow-seeded description (paraphrase from smb workflow).

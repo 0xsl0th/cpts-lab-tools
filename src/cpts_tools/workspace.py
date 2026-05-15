@@ -163,7 +163,7 @@ def init_workspace(
     target_ip: str | None = None,
     target_host: str | None = None,
     domain: str | None = None,
-    platform: str = "htb",
+    platform: str = "lab",
     force: bool = False,
 ) -> WorkspaceMetadata:
     """Create the workspace folder tree, metadata file, and report scaffold."""

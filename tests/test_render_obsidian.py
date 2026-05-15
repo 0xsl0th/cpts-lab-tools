@@ -5,8 +5,8 @@ from cpts_tools.workflows import lookup, resolve
 def _ctx(**overrides):
     base = dict(
         target_ip="10.10.10.5",
-        target_host="target.htb",
-        domain="target.htb",
+        target_host="target.corp.local",
+        domain="target.corp.local",
         detected=(),
         unmapped=(),
     )

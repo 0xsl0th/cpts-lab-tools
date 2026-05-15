@@ -22,9 +22,9 @@ def test_init_workspace_creates_folder_tree_and_metadata(tmp_path: Path) -> None
         workspace,
         name="alpha",
         target_ip="10.10.10.5",
-        target_host="alpha.htb",
-        domain="alpha.htb",
-        platform="htb",
+        target_host="alpha.corp.local",
+        domain="alpha.corp.local",
+        platform="lab",
     )
 
     assert workspace.is_dir()
@@ -35,7 +35,7 @@ def test_init_workspace_creates_folder_tree_and_metadata(tmp_path: Path) -> None
 
     assert metadata.name == "alpha"
     assert metadata.target_ip == "10.10.10.5"
-    assert metadata.platform == "htb"
+    assert metadata.platform == "lab"
     assert metadata.created_at  # populated with timestamp
 
 
@@ -45,8 +45,8 @@ def test_init_workspace_writes_readable_metadata(tmp_path: Path) -> None:
         workspace,
         name="beta",
         target_ip="10.10.10.6",
-        target_host="beta.htb",
-        domain="beta.htb",
+        target_host="beta.corp.local",
+        domain="beta.corp.local",
     )
 
     on_disk = json.loads((workspace / METADATA_FILENAME).read_text(encoding="utf-8"))
@@ -55,7 +55,7 @@ def test_init_workspace_writes_readable_metadata(tmp_path: Path) -> None:
 
     round_tripped = read_metadata(workspace)
     assert round_tripped.target_ip == "10.10.10.6"
-    assert round_tripped.target_host == "beta.htb"
+    assert round_tripped.target_host == "beta.corp.local"
 
 
 def test_init_workspace_refuses_to_overwrite_existing(tmp_path: Path) -> None:
@@ -84,15 +84,15 @@ def test_report_scaffold_contains_target_fields() -> None:
     metadata = WorkspaceMetadata(
         name="epsilon",
         target_ip="10.10.10.9",
-        target_host="epsilon.htb",
-        domain="epsilon.htb",
-        platform="htb",
+        target_host="epsilon.corp.local",
+        domain="epsilon.corp.local",
+        platform="lab",
     )
     report = report_scaffold(metadata)
 
     assert "# epsilon" in report
     assert "`10.10.10.9`" in report
-    assert "`epsilon.htb`" in report
+    assert "`epsilon.corp.local`" in report
     assert "`[LHOST]`" in report  # operator placeholder preserved
     assert "[[notes/methodology/index]]" in report
 
