@@ -1,4 +1,6 @@
+import json
 import re
+from dataclasses import asdict
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
@@ -154,6 +156,13 @@ class InputFormat(str, Enum):
 class OutputFormat(str, Enum):
     MD = "md"
     OBSIDIAN = "obsidian"
+    JSON = "json"
+
+
+class TableOrJson(str, Enum):
+    """Output mode for read-only commands (parse-nmap, parse-web, finding list)."""
+
+    TABLE = "table"
     JSON = "json"
 
 
@@ -350,7 +359,7 @@ def format_services(services: list[dict[str, str]]) -> str:
     epilog=(
         "**Examples**\n\n\n\n"
         "`reconlab parse-nmap scans/initial.xml`\n\n\n\n"
-        "`reconlab parse-nmap ~/labs/target/scans/initial.xml`"
+        "`reconlab parse-nmap scans/initial.xml --output-format json | jq '.[] | select(.port==\"445\")'`"
     ),
 )
 def parse_nmap(
@@ -364,12 +373,24 @@ def parse_nmap(
             help="Path to an nmap XML output file.",
         ),
     ],
+    output_format: Annotated[
+        TableOrJson,
+        typer.Option(
+            "--output-format",
+            help="`table` (default) prints a fixed-width table; `json` emits a list of service dicts for piping to jq.",
+        ),
+    ] = TableOrJson.TABLE,
 ) -> None:
     """Parse an nmap XML file and print a clean open-service summary."""
     try:
-        typer.echo(format_services(parse_nmap_services(xml_file)))
+        services = parse_nmap_services(xml_file)
     except ElementTree.ParseError as exc:
         raise typer.BadParameter(f"Invalid nmap XML: {exc}") from exc
+
+    if output_format is TableOrJson.JSON:
+        typer.echo(json.dumps(services, indent=2))
+    else:
+        typer.echo(format_services(services))
 
 
 @app.command(
@@ -379,7 +400,8 @@ def parse_nmap(
         "`reconlab parse-web web/ferox.json`\n\n\n\n"
         "`reconlab parse-web web/dirs.txt --status 200,301,403`\n\n\n\n"
         "`reconlab parse-web web/scan.txt --input-format feroxbuster`\n\n\n\n"
-        "`reconlab parse-web web/dirbuster.txt --input-format dirbuster`"
+        "`reconlab parse-web web/dirbuster.txt --input-format dirbuster`\n\n\n\n"
+        "`reconlab parse-web web/dirs.txt --output-format json | jq '.[] | .url'`"
     ),
 )
 def parse_web(
@@ -390,7 +412,7 @@ def parse_web(
             file_okay=True,
             dir_okay=False,
             readable=True,
-            help="feroxbuster or gobuster output file.",
+            help="feroxbuster, gobuster, or DirBuster output file.",
         ),
     ],
     input_format: Annotated[
@@ -399,7 +421,7 @@ def parse_web(
             "--input-format",
             help=(
                 "Web-tool output format. `auto` sniffs the file; "
-                "`feroxbuster` and `gobuster` are text formats; "
+                "`feroxbuster`, `gobuster`, and `dirbuster` are text formats; "
                 "`feroxbuster-json` is newline-delimited JSON from feroxbuster's `--json`."
             ),
         ),
@@ -411,8 +433,15 @@ def parse_web(
             help="Comma-separated status codes to keep (e.g. '200,301,403'). Default: all rows in the file.",
         ),
     ] = None,
+    output_format: Annotated[
+        TableOrJson,
+        typer.Option(
+            "--output-format",
+            help="`table` (default) prints a fixed-width table; `json` emits a list of result dicts for piping to jq.",
+        ),
+    ] = TableOrJson.TABLE,
 ) -> None:
-    """Parse feroxbuster/gobuster output into a clean status/size/URL table."""
+    """Parse feroxbuster/gobuster/DirBuster output into a clean status/size/URL table."""
     try:
         rows = parse_web_results(input_file, input_format)
     except ValueError as exc:
@@ -421,7 +450,10 @@ def parse_web(
     if status:
         rows = filter_by_status(rows, status.split(","))
 
-    typer.echo(format_web_results(rows))
+    if output_format is TableOrJson.JSON:
+        typer.echo(json.dumps(rows, indent=2))
+    else:
+        typer.echo(format_web_results(rows))
 
 
 _IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
@@ -1094,7 +1126,8 @@ def finding_add(
     epilog=(
         "**Examples**\n\n\n\n"
         "`reconlab finding list` -- cwd\n\n\n\n"
-        "`reconlab finding list ~/labs/target`"
+        "`reconlab finding list ~/labs/target`\n\n\n\n"
+        "`reconlab finding list --output-format json | jq '.[] | select(.severity==\"High\")'`"
     ),
 )
 def finding_list(
@@ -1102,6 +1135,13 @@ def finding_list(
         Path,
         typer.Argument(help="Workspace path (defaults to the current directory)."),
     ] = Path("."),
+    output_format: Annotated[
+        TableOrJson,
+        typer.Option(
+            "--output-format",
+            help="`table` (default) prints a fixed-width table; `json` emits a list of finding dicts for piping to jq.",
+        ),
+    ] = TableOrJson.TABLE,
 ) -> None:
     """Print the findings currently recorded in the workspace report.md."""
     try:
@@ -1109,7 +1149,10 @@ def finding_list(
     except FileNotFoundError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
-    typer.echo(format_findings_table(findings))
+    if output_format is TableOrJson.JSON:
+        typer.echo(json.dumps([asdict(f) for f in findings], indent=2))
+    else:
+        typer.echo(format_findings_table(findings))
 
 
 _CATEGORY_ORDER: dict[str, int] = {

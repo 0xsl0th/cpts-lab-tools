@@ -109,6 +109,9 @@ vault with one MOC (`index.md`) and one note per detected service.
 
 ```bash
 reconlab parse-nmap scans/target.xml
+
+# JSON for piping to jq
+reconlab parse-nmap scans/target.xml --output-format json | jq '.[] | select(.port=="445")'
 ```
 
 Example output:
@@ -139,6 +142,9 @@ reconlab parse-web outputs/feroxbuster.txt --status 200,301,403
 # Force a specific parser
 reconlab parse-web outputs/scan.txt --input-format feroxbuster
 reconlab parse-web outputs/scan.txt --input-format dirbuster
+
+# JSON for piping to jq
+reconlab parse-web outputs/dirs.txt --output-format json | jq '.[] | .url'
 ```
 
 Example output:
@@ -299,10 +305,13 @@ Path:      /home/op/labs/target
   Methodology  notes/methodology/  - STALE (newer scans present)
   Findings     1 recorded - 1 High
 
-Next: scans/ changed since the methodology was generated - re-run `reconlab workspace suggest --force`.
+Next: methodology is stale relative to scans/. Re-run:
+      reconlab workspace suggest --force
 ```
 
-The **Next** line is state-driven: it points at `workspace suggest` when no
+The **Next** block is state-driven: a short description explains the
+situation, and any concrete commands appear on indented lines below so
+they are easy to copy-paste. It points at `workspace suggest` when no
 methodology exists yet, flags a stale methodology once newer scans land, and
 nudges toward `finding add` after methodology is in place. It never modifies
 the workspace - `workspace status` is read-only.

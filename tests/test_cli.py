@@ -91,6 +91,39 @@ def test_parse_nmap_handles_no_open_services(tmp_path: Path) -> None:
     assert "No open services found." in result.output
 
 
+def test_parse_nmap_json_output_emits_valid_json_with_expected_fields(
+    tmp_path: Path,
+) -> None:
+    xml_file = tmp_path / "nmap.xml"
+    xml_file.write_text(
+        """<?xml version="1.0"?>
+<nmaprun>
+  <host>
+    <address addr="10.10.10.5" addrtype="ipv4"/>
+    <hostnames><hostname name="app.corp.local" type="user"/></hostnames>
+    <ports>
+      <port protocol="tcp" portid="445">
+        <state state="open"/>
+        <service name="microsoft-ds" product="Samba" version="4.15.0"/>
+      </port>
+    </ports>
+  </host>
+</nmaprun>""",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["parse-nmap", str(xml_file), "--output-format", "json"])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert isinstance(data, list)
+    assert len(data) == 1
+    assert data[0]["host"] == "10.10.10.5"
+    assert data[0]["port"] == "445"
+    assert data[0]["service"] == "microsoft-ds"
+    assert data[0]["product"] == "Samba"
+
+
 def test_make_hosts_positional_prints_hosts_entry_and_shell_command() -> None:
     result = runner.invoke(
         app,
@@ -1102,6 +1135,51 @@ def test_finding_list_shows_recorded_findings(tmp_path: Path) -> None:
     assert "SMB null session enabled" in result.output
     assert "High" in result.output
     assert "smb:445" in result.output
+
+
+def test_finding_list_json_output_emits_list_of_finding_dicts(tmp_path: Path) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    runner.invoke(
+        app,
+        [
+            "finding", "add",
+            "--title", "SMB null session enabled",
+            "--severity", "high",
+            "--service", "smb",
+            "--port", "445",
+            str(workspace),
+        ],
+    )
+
+    result = runner.invoke(
+        app, ["finding", "list", str(workspace), "--output-format", "json"]
+    )
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert isinstance(data, list)
+    real = [f for f in data if f["title"] == "SMB null session enabled"]
+    assert len(real) == 1
+    assert real[0]["severity"] == "High"
+    assert "smb:445" in real[0]["service_port"]
+
+
+def test_parse_web_json_output_emits_list_of_result_dicts() -> None:
+    result = runner.invoke(
+        app, ["parse-web", str(FIXTURE_GOBUSTER), "--output-format", "json"]
+    )
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert isinstance(data, list)
+    assert data
+    sample = data[0]
+    for field in ("status", "method", "size", "url"):
+        assert field in sample
 
 
 def test_workflow_list_includes_known_services() -> None:

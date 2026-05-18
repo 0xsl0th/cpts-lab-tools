@@ -59,6 +59,14 @@ def _methodology_mtime(methodology: Path) -> float:
     return methodology.stat().st_mtime
 
 
+_NEXT_INDENT = "      "  # aligns command lines under the "Next: " prefix
+
+
+def _hint(summary: str, *commands: str) -> str:
+    """Render a next-step hint as a description plus indented copy-pasteable commands."""
+    return summary + "".join(f"\n{_NEXT_INDENT}{cmd}" for cmd in commands)
+
+
 def _next_step(
     scan_count: int,
     methodology: Path | None,
@@ -66,30 +74,42 @@ def _next_step(
     findings: list[ParsedFinding],
     web_finding_count: int,
 ) -> str:
-    """Pick the single most useful next action for the current workspace state."""
+    """Pick the single most useful next action for the current workspace state.
+
+    Returns a multi-line string: the first line summarizes the situation; any
+    subsequent indented lines are concrete commands ready to copy-paste.
+    """
     if scan_count == 0:
-        return "Drop an nmap scan into scans/, then run `reconlab workspace suggest`."
+        return _hint(
+            "no scans yet. Drop an nmap scan into scans/, then run:",
+            "reconlab workspace suggest",
+        )
     if methodology is None:
-        return "Run `reconlab workspace suggest` to generate methodology from scans/."
+        return _hint(
+            "scans/ has output but no methodology generated yet. Run:",
+            "reconlab workspace suggest",
+        )
     if methodology_stale:
-        return (
-            "scans/ changed since the methodology was generated - re-run "
-            "`reconlab workspace suggest --force`."
+        return _hint(
+            "methodology is stale relative to scans/. Re-run:",
+            "reconlab workspace suggest --force",
         )
     if not findings:
         if web_finding_count:
-            return (
-                "Review web findings with `reconlab workspace ingest-web`, "
-                "work through notes/methodology/, then record results with "
-                "`reconlab finding add`."
+            return _hint(
+                "web findings present and no findings recorded yet. "
+                "Review them, work through methodology, then capture findings:",
+                "reconlab workspace ingest-web",
+                "reconlab finding add --title '...' --severity high --service <id>",
             )
-        return (
-            "Work through notes/methodology/, and record results with "
-            "`reconlab finding add`."
+        return _hint(
+            "no findings recorded yet. Work through notes/methodology/ and capture findings:",
+            "reconlab finding add --title '...' --severity high --service <id>",
         )
-    return (
-        "Keep capturing findings with `reconlab finding add`; "
-        "review report.md before wrap-up."
+    return _hint(
+        "findings in progress. Keep capturing, then review report.md before wrap-up:",
+        "reconlab finding add --title '...' --severity high --service <id>",
+        "reconlab workspace check",
     )
 
 

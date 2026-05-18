@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`--output-format json` for `parse-nmap`, `parse-web`, and `finding list`.**
+  The read-only parsers now emit a JSON list of dicts when `--output-format
+  json` is passed, parallel to how `workspace suggest` already supports JSON
+  output. Default behavior unchanged - the table renderer still runs when no
+  flag is set. Useful for piping into `jq` or feeding other tools.
+
+### Changed
+
+- **`workspace status` next-step hints are now copy-pasteable.** The "Next:"
+  block previously embedded a backtick-quoted command mid-prose. It now
+  renders as a one-line description followed by each suggested command on
+  its own indented line, so you can triple-click to copy the command. The
+  single-vs-multi-command case (e.g. methodology stale → one command vs.
+  web findings + no findings yet → two commands) is handled uniformly.
+
 ## [0.10.0] - 2026-05-17
 
 ### Added

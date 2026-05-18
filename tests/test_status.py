@@ -171,3 +171,30 @@ def test_format_status_includes_key_lines(tmp_path: Path) -> None:
     assert "STALE" in rendered
     assert "1 recorded - 1 High" in rendered
     assert "Next:" in rendered
+
+
+def test_next_step_renders_command_on_its_own_indented_line(tmp_path: Path) -> None:
+    # No scans -> single-command hint.
+    status = gather_status(_ws(tmp_path))
+    lines = status.next_step.splitlines()
+    assert len(lines) >= 2
+    assert lines[0].endswith(":")
+    assert lines[1].startswith("      ")  # 6-space indent aligns under 'Next: '
+    assert lines[1].strip() == "reconlab workspace suggest"
+
+
+def test_next_step_lists_multiple_commands_when_multiple_steps_remain(
+    tmp_path: Path,
+) -> None:
+    # Methodology fresh + no findings yet + web findings present -> two commands.
+    workspace = _ws(tmp_path)
+    _scan(workspace, "tcp.xml", mtime=1000)
+    _methodology_vault(workspace, mtime=2000)
+    web = workspace / "web" / "scan.txt"
+    web.write_text("/admin (Status: 200) [Size: 1234]\n", encoding="utf-8")
+    status = gather_status(workspace)
+
+    lines = status.next_step.splitlines()
+    command_lines = [line.strip() for line in lines[1:] if line.startswith("      ")]
+    assert "reconlab workspace ingest-web" in command_lines
+    assert any(cmd.startswith("reconlab finding add") for cmd in command_lines)
