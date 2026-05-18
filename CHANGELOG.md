@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`make-hosts` is now workspace-aware.** Run with no IP/hostname args (or
+  pointed at a workspace path) and it pulls hostname candidates from
+  `.reconlab.json` and every nmap XML scan in `scans/` — extracting reverse
+  DNS, `ssl-cert` Subject CN and SAN DNS entries, `http-title` redirects, and
+  `smb-os-discovery` FQDN. Candidates are deduplicated case-insensitively with
+  merged sources shown so you can see why each hostname was suggested. The
+  manual no-workspace forms (`make-hosts IP HOSTNAMES...` and
+  `--ip/--host/--aliases`) are unchanged and trigger automatically when the
+  first positional is an IPv4 address. A new `--target-ip` flag overrides the
+  workspace's metadata IP for a single run.
+
 ## [0.7.0] - 2026-05-15
 
 ### Added

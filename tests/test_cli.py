@@ -174,10 +174,10 @@ def test_make_hosts_preserves_alias_casing() -> None:
     assert "DEV.target.corp.local" in result.output
 
 
-def test_make_hosts_no_args_errors() -> None:
-    result = runner.invoke(app, ["make-hosts"])
+def test_make_hosts_no_args_in_non_workspace_errors(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["make-hosts", str(tmp_path)])
     assert result.exit_code != 0
-    assert "IP and at least one hostname" in strip_ansi(result.output)
+    assert "No workspace metadata" in strip_ansi(result.output)
 
 
 def test_make_hosts_only_ip_errors() -> None:
@@ -1305,3 +1305,95 @@ def test_workspace_suggest_single_scan_says_using_scan(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert f"Using scan: {only}" in result.output
     assert "Merging" not in result.output
+
+
+SCRIPTED_XML_FIXTURE = FIXTURE_DIR / "sample_nmap_with_scripts.xml"
+
+
+def _make_workspace_with_scripted_scan(
+    tmp_path: Path,
+    *,
+    ip: str = "10.10.10.5",
+    host: str | None = None,
+    domain: str | None = None,
+    include_scan: bool = True,
+) -> Path:
+    args = ["workspace", "init", "target", "--ip", ip, "-o", str(tmp_path)]
+    if host is not None:
+        args.extend(["--host", host])
+    if domain is not None:
+        args.extend(["--domain", domain])
+    runner.invoke(app, args)
+    workspace = tmp_path / "target"
+    if include_scan:
+        (workspace / "scans" / "scripted.xml").write_text(
+            SCRIPTED_XML_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    return workspace
+
+
+def test_make_hosts_workspace_mode_aggregates_from_scan(tmp_path: Path) -> None:
+    workspace = _make_workspace_with_scripted_scan(tmp_path)
+    result = runner.invoke(app, ["make-hosts", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert f"# Workspace: {workspace}" in result.output
+    assert "# Target IP: 10.10.10.5" in result.output
+    assert "app.corp.local" in result.output
+    assert "dev.app.corp.local" in result.output
+    assert "intranet.corp.local" in result.output
+    assert "# Add this to /etc/hosts:" in result.output
+    assert "10.10.10.5 " in result.output
+    assert "ssl-cert SAN" in result.output
+    assert "other.corp.local" not in result.output
+
+
+def test_make_hosts_workspace_mode_handles_missing_target_ip(tmp_path: Path) -> None:
+    runner.invoke(app, ["workspace", "init", "target", "-o", str(tmp_path)])
+    workspace = tmp_path / "target"
+    result = runner.invoke(app, ["make-hosts", str(workspace)])
+
+    assert result.exit_code != 0
+    assert "No target IP" in strip_ansi(result.output)
+
+
+def test_make_hosts_workspace_mode_accepts_target_ip_override(tmp_path: Path) -> None:
+    runner.invoke(app, ["workspace", "init", "target", "-o", str(tmp_path)])
+    workspace = tmp_path / "target"
+    (workspace / "scans" / "scripted.xml").write_text(
+        SCRIPTED_XML_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    result = runner.invoke(
+        app, ["make-hosts", str(workspace), "--target-ip", "10.10.10.99"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "# Target IP: 10.10.10.99" in result.output
+    assert "other.corp.local" in result.output
+    assert "app.corp.local" not in result.output
+
+
+def test_make_hosts_workspace_mode_no_candidates_still_prints_ip_line(
+    tmp_path: Path,
+) -> None:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    result = runner.invoke(app, ["make-hosts", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "No hostname candidates" in result.output
+    assert "10.10.10.5" in result.output
+
+
+def test_make_hosts_workspace_mode_uses_metadata_host(tmp_path: Path) -> None:
+    workspace = _make_workspace_with_scripted_scan(
+        tmp_path, host="manual.corp.local", include_scan=False
+    )
+    result = runner.invoke(app, ["make-hosts", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "manual.corp.local" in result.output
+    assert "metadata target_host" in result.output

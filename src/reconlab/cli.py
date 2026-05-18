@@ -1,3 +1,4 @@
+import re
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
@@ -39,6 +40,7 @@ from .workflows import all_ids as all_workflow_ids
 from .workflows import lookup as lookup_workflow
 from .workflows import resolve as resolve_workflows
 from .workspace import (
+    collect_hostname_candidates,
     find_all_scans,
     find_all_web_files,
     find_latest_scan,
@@ -349,44 +351,84 @@ def parse_web(
     typer.echo(format_web_results(rows))
 
 
+_IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+
+
 @app.command("make-hosts")
 def make_hosts(
     args: Annotated[
         list[str] | None,
         typer.Argument(
-            metavar="[IP] [HOSTNAMES...]",
+            metavar="[IP HOSTNAMES... | WORKSPACE]",
             help=(
-                "Positional form: target IP followed by one or more hostnames. "
-                "When --ip is also passed, these positionals are treated as additional "
-                "hostnames (so `--aliases a b c` works naturally)."
+                "Default (no args): aggregate hostnames from the workspace in the "
+                "current directory. Pass a directory path to use that workspace "
+                "instead. Pass an IP followed by one or more hostnames for the "
+                "manual no-workspace form."
             ),
         ),
     ] = None,
     ip: Annotated[
         str | None,
-        typer.Option("--ip", help="Target IP address (flag form)."),
+        typer.Option("--ip", help="Target IP address (manual form, no workspace)."),
     ] = None,
     host: Annotated[
         str | None,
-        typer.Option("--host", help="Primary hostname (flag form)."),
+        typer.Option("--host", help="Primary hostname (manual form, no workspace)."),
     ] = None,
     aliases: Annotated[
         list[str] | None,
         typer.Option(
             "--aliases",
             help=(
-                "Hostname alias. May be repeated, or followed by additional "
-                "space-separated hostnames as trailing positional arguments."
+                "Hostname alias for the manual form. May be repeated, or followed "
+                "by additional space-separated hostnames as trailing positionals."
+            ),
+        ),
+    ] = None,
+    target_ip: Annotated[
+        str | None,
+        typer.Option(
+            "--target-ip",
+            help=(
+                "Override the workspace's target IP for this run. Useful when the "
+                "workspace metadata has no IP set yet."
             ),
         ),
     ] = None,
 ) -> None:
-    """Print the /etc/hosts entry plus the equivalent shell command. Does not modify any file."""
+    """Suggest an /etc/hosts entry — workspace-aware by default, with a manual fallback.
+
+    Does not modify any file.
+    """
     positional = list(args or [])
+    manual_flags_set = ip is not None or host is not None or bool(aliases)
+    first_is_ipv4 = bool(positional) and bool(_IPV4_RE.match(positional[0]))
+
+    if manual_flags_set or first_is_ipv4:
+        _emit_manual_hosts(positional, ip, host, aliases)
+        return
+
+    if positional and len(positional) > 1:
+        raise typer.BadParameter(
+            "Workspace mode takes at most one positional (the workspace path). "
+            "For the manual form, the first positional must be an IPv4 address."
+        )
+
+    workspace_path = Path(positional[0]) if positional else Path.cwd()
+    _emit_workspace_hosts(workspace_path, target_ip_override=target_ip)
+
+
+def _emit_manual_hosts(
+    positional: list[str],
+    ip: str | None,
+    host: str | None,
+    aliases: list[str] | None,
+) -> None:
     extra_aliases = list(aliases or [])
 
     if ip is not None:
-        target_ip = ip
+        resolved_ip = ip
         hostnames: list[str] = []
         if host is not None:
             hostnames.append(host)
@@ -398,16 +440,11 @@ def make_hosts(
                 "--host and --aliases require --ip. "
                 "Either pass --ip too, or use the positional form `IP HOSTNAMES...`."
             )
-        if not positional:
-            raise typer.BadParameter(
-                "Provide an IP and at least one hostname, "
-                "e.g. `make-hosts 10.10.10.5 app.corp.local` or `--ip ... --host ...`."
-            )
         if len(positional) < 2:
             raise typer.BadParameter(
                 "Positional form needs IP plus at least one hostname."
             )
-        target_ip = positional[0]
+        resolved_ip = positional[0]
         hostnames = positional[1:]
 
     if not hostnames:
@@ -415,6 +452,46 @@ def make_hosts(
             "At least one hostname is required (pass --host or trailing positional)."
         )
 
+    _print_hosts_line(resolved_ip, hostnames)
+
+
+def _emit_workspace_hosts(
+    workspace_path: Path, *, target_ip_override: str | None
+) -> None:
+    try:
+        resolved_ip, aggregated = collect_hostname_candidates(
+            workspace_path, target_ip=target_ip_override
+        )
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    if resolved_ip is None:
+        raise typer.BadParameter(
+            f"No target IP for workspace {workspace_path}. "
+            "Set `target_ip` in .reconlab.json or pass --target-ip."
+        )
+
+    typer.echo(f"# Workspace: {workspace_path}")
+    typer.echo(f"# Target IP: {resolved_ip}")
+
+    if not aggregated:
+        typer.echo("# No hostname candidates found in metadata or scans/.")
+        typer.echo("")
+        typer.echo("# Add this to /etc/hosts (IP only — add hostnames manually):")
+        typer.echo(resolved_ip)
+        return
+
+    typer.echo("# Hostname candidates:")
+    for agg in aggregated:
+        sources = ", ".join(agg.sources)
+        typer.echo(f"#   {agg.hostname}   ({sources})")
+    typer.echo("")
+
+    hostnames = [agg.hostname for agg in aggregated]
+    _print_hosts_line(resolved_ip, hostnames)
+
+
+def _print_hosts_line(target_ip: str, hostnames: list[str]) -> None:
     line = f"{target_ip} {' '.join(hostnames)}"
     typer.echo("# Add this to /etc/hosts:")
     typer.echo(line)

@@ -8,12 +8,15 @@ from reconlab.workspace import (
     METADATA_FILENAME,
     WORKSPACE_FOLDERS,
     WorkspaceMetadata,
+    collect_hostname_candidates,
     find_latest_scan,
     init_workspace,
     read_metadata,
     report_scaffold,
     write_metadata,
 )
+
+SCRIPTED_XML = Path(__file__).parent / "fixtures" / "sample_nmap_with_scripts.xml"
 
 
 def test_init_workspace_creates_folder_tree_and_metadata(tmp_path: Path) -> None:
@@ -223,3 +226,99 @@ def test_find_all_scans_excludes_non_scan_files(tmp_path: Path) -> None:
     real = scans / "real.xml"
     real.write_text("<nmaprun/>", encoding="utf-8")
     assert find_all_scans(scans) == [real]
+
+
+def _setup_workspace_with_scan(
+    tmp_path: Path,
+    *,
+    target_ip: str | None = "10.10.10.5",
+    target_host: str | None = None,
+    domain: str | None = None,
+    include_scan: bool = True,
+) -> Path:
+    workspace = tmp_path / "wks"
+    init_workspace(
+        workspace,
+        name="wks",
+        target_ip=target_ip,
+        target_host=target_host,
+        domain=domain,
+    )
+    if include_scan:
+        (workspace / "scans" / "scripted.xml").write_text(
+            SCRIPTED_XML.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    return workspace
+
+
+def test_collect_hostname_candidates_dedupes_and_merges_sources(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path)
+    resolved_ip, aggregated = collect_hostname_candidates(workspace)
+
+    assert resolved_ip == "10.10.10.5"
+    hostnames = {agg.hostname: agg.sources for agg in aggregated}
+    assert "app.corp.local" in hostnames
+    assert set(hostnames["app.corp.local"]) == {
+        "dns",
+        "ssl-cert CN",
+        "ssl-cert SAN",
+        "smb-os-discovery FQDN",
+    }
+    assert "dev.app.corp.local" in hostnames
+    assert "intranet.corp.local" in hostnames
+    assert "other.corp.local" not in hostnames  # belongs to 10.10.10.99
+
+
+def test_collect_hostname_candidates_includes_metadata_target_host(
+    tmp_path: Path,
+) -> None:
+    workspace = _setup_workspace_with_scan(
+        tmp_path,
+        target_host="primary.corp.local",
+        include_scan=False,
+    )
+    _, aggregated = collect_hostname_candidates(workspace)
+
+    hostnames = {agg.hostname for agg in aggregated}
+    assert "primary.corp.local" in hostnames
+
+
+def test_collect_hostname_candidates_builds_fqdn_from_host_and_domain(
+    tmp_path: Path,
+) -> None:
+    workspace = _setup_workspace_with_scan(
+        tmp_path,
+        target_host="primary",
+        domain="corp.local",
+        include_scan=False,
+    )
+    _, aggregated = collect_hostname_candidates(workspace)
+
+    hostnames = {agg.hostname for agg in aggregated}
+    assert "primary" in hostnames
+    assert "primary.corp.local" in hostnames
+
+
+def test_collect_hostname_candidates_target_ip_override_filters_scans(
+    tmp_path: Path,
+) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, target_ip=None)
+    resolved_ip, aggregated = collect_hostname_candidates(
+        workspace, target_ip="10.10.10.99"
+    )
+
+    assert resolved_ip == "10.10.10.99"
+    hostnames = {agg.hostname for agg in aggregated}
+    assert "other.corp.local" in hostnames
+    assert "app.corp.local" not in hostnames
+
+
+def test_collect_hostname_candidates_returns_none_ip_when_unset(
+    tmp_path: Path,
+) -> None:
+    workspace = _setup_workspace_with_scan(
+        tmp_path, target_ip=None, include_scan=False
+    )
+    resolved_ip, aggregated = collect_hostname_candidates(workspace)
+    assert resolved_ip is None
+    assert aggregated == []

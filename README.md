@@ -33,7 +33,7 @@ python -m pip install -e ".[dev]"
 | `workspace check` | Lint `report.md` for wrap-up readiness — unfilled findings and sections. Exits non-zero on issues. |
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry — no scan or workspace needed. |
-| `make-hosts` | Print an `/etc/hosts` entry plus a copy-paste shell command. Read-only. |
+| `make-hosts` | Suggest an `/etc/hosts` entry — workspace-aware (pulls hostnames from scan output and metadata) with a manual no-workspace fallback. Read-only. |
 | `parse-nmap` | Tabular summary of open services from an nmap XML scan. |
 | `parse-web` | Tabular summary of feroxbuster / gobuster output (text or JSON). |
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
@@ -58,7 +58,9 @@ cd target
 
 # 2. (Optional) Print the /etc/hosts entry and a copy-paste shell command.
 #    Does NOT modify /etc/hosts — you run the printed command yourself.
-reconlab make-hosts 10.10.10.5 app.corp.local
+#    Reads target IP/host from .reconlab.json; re-run after nmap to also pick
+#    up hostnames from ssl-cert SANs, http-title redirects, and SMB FQDN.
+reconlab make-hosts
 
 # 3. Run nmap into the workspace's scans/ folder.
 sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
@@ -157,23 +159,59 @@ non-`response` entries (scan-config, report) filtered out.
 `make-hosts` is a read-only helper. It prints the line you should add to
 `/etc/hosts` plus a ready-to-paste shell command. It never modifies any file.
 
-Positional form:
+#### Workspace mode (default)
+
+Run with no IP/hostname args inside (or pointed at) a workspace. The command
+reads `.reconlab.json` for the target IP plus any `target_host` / `domain`,
+walks every nmap XML scan in `scans/`, and pulls hostname candidates from:
+
+- `<hostnames>` (reverse DNS / user-supplied)
+- `ssl-cert` script: subject `commonName` and Subject Alternative Names
+  (DNS entries; wildcards and IP SANs are filtered out)
+- `http-title` script: hostnames in "Did not follow redirect to ..." lines
+- `smb-os-discovery` script: `fqdn` field
+
+Candidates are deduplicated case-insensitively (first-seen casing wins) and
+the merged sources are shown so you can see *why* each hostname was suggested.
+
+```bash
+cd ~/labs/target
+reconlab make-hosts
+# or: reconlab make-hosts ~/labs/target
+```
+
+Sample output for a workspace whose scans contain ssl-cert + smb-os-discovery
+script results:
+
+```text
+# Workspace: /home/you/labs/target
+# Target IP: 10.10.10.5
+# Hostname candidates:
+#   app.corp.local   (dns, ssl-cert CN, ssl-cert SAN, smb-os-discovery FQDN)
+#   intranet.corp.local   (http-title redirect)
+#   dev.app.corp.local   (ssl-cert SAN)
+
+# Add this to /etc/hosts:
+10.10.10.5 app.corp.local intranet.corp.local dev.app.corp.local
+
+# Or run:
+echo "10.10.10.5 app.corp.local intranet.corp.local dev.app.corp.local" | sudo tee -a /etc/hosts
+```
+
+If `.reconlab.json` has no `target_ip` set, pass `--target-ip 10.10.10.5` to
+override for this run. If no hostname candidates are found, the IP line is
+still printed so you can add hostnames manually.
+
+#### Manual form (no workspace)
+
+Pass an IP followed by one or more hostnames when you just want to format a
+line without involving a workspace:
 
 ```bash
 reconlab make-hosts 10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
 ```
 
-Output:
-
-```text
-# Add this to /etc/hosts:
-10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
-
-# Or run:
-echo "10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local" | sudo tee -a /etc/hosts
-```
-
-Flag form (equivalent output):
+Or the equivalent flag form:
 
 ```bash
 reconlab make-hosts \
@@ -186,7 +224,9 @@ In the flag form, the first value after `--aliases` is consumed by the flag and
 any further positional arguments are appended as additional aliases — so the
 shell-natural `--aliases a b c` syntax works. Repeating the flag
 (`--aliases a --aliases b`) is also supported. Hostname casing is preserved
-exactly as typed.
+exactly as typed. Whether workspace mode or manual form runs is decided by the
+first positional: an IPv4 address routes to manual; anything else (or no args)
+routes to workspace mode.
 
 ### Manage a lab workspace
 

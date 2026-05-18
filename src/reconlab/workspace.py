@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
+
+from . import nmap as _nmap
 
 METADATA_FILENAME = ".reconlab.json"
 WORKSPACE_FOLDERS: tuple[str, ...] = (
@@ -232,3 +234,74 @@ def find_all_web_files(web_dir: Path) -> list[Path]:
         if path.is_file() and path.suffix.lower() in WEB_EXTENSIONS
     ]
     return sorted(candidates, key=lambda p: p.stat().st_mtime)
+
+
+@dataclass
+class AggregatedHostname:
+    """A deduplicated hostname with every source that mentioned it."""
+
+    hostname: str
+    sources: list[str] = field(default_factory=list)
+
+
+def collect_hostname_candidates(
+    workspace: Path,
+    *,
+    target_ip: str | None = None,
+) -> tuple[str | None, list[AggregatedHostname]]:
+    """Aggregate hostname candidates for a workspace.
+
+    Pulls from `.reconlab.json` (target_host, target_host + domain as FQDN)
+    and every XML scan in `scans/`. Filters scan candidates to those whose
+    IP matches the workspace target IP (from metadata or the explicit
+    `target_ip` override). Scan candidates with no IP attached are kept.
+
+    Returns (resolved_target_ip, aggregated_hostnames). Deduplication is
+    case-insensitive; the first-seen casing wins; sources accumulate in
+    order of discovery.
+    """
+    metadata = read_metadata(workspace)
+    resolved_ip = target_ip if target_ip is not None else metadata.target_ip
+
+    raw: list[_nmap.HostnameCandidate] = []
+
+    if metadata.target_host:
+        raw.append(
+            _nmap.HostnameCandidate(
+                hostname=metadata.target_host,
+                source="metadata target_host",
+                ip=resolved_ip,
+            )
+        )
+        if metadata.domain and "." not in metadata.target_host:
+            fqdn = f"{metadata.target_host}.{metadata.domain}"
+            raw.append(
+                _nmap.HostnameCandidate(
+                    hostname=fqdn,
+                    source="metadata target_host + domain",
+                    ip=resolved_ip,
+                )
+            )
+
+    scans_dir = workspace / "scans"
+    for scan_path in find_all_scans(scans_dir):
+        if scan_path.suffix.lower() != ".xml":
+            continue
+        for candidate in _nmap.extract_hostname_candidates(scan_path):
+            if (
+                resolved_ip is not None
+                and candidate.ip is not None
+                and candidate.ip != resolved_ip
+            ):
+                continue
+            raw.append(candidate)
+
+    aggregated: dict[str, AggregatedHostname] = {}
+    for cand in raw:
+        key = cand.hostname.lower()
+        if key not in aggregated:
+            aggregated[key] = AggregatedHostname(hostname=cand.hostname, sources=[])
+        if cand.source not in aggregated[key].sources:
+            aggregated[key].sources.append(cand.source)
+
+    return resolved_ip, list(aggregated.values())

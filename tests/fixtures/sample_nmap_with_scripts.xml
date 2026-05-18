@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nmaprun scanner="nmap" args="nmap -sV -sC -oX target.xml 10.10.10.5" start="0" version="7.94" xmloutputversion="1.05">
+<host starttime="0" endtime="0">
+<address addr="10.10.10.5" addrtype="ipv4"/>
+<hostnames>
+<hostname name="app.corp.local" type="user"/>
+</hostnames>
+<ports>
+<port protocol="tcp" portid="80">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="http" product="nginx" version="1.18.0"/>
+<script id="http-title" output="Did not follow redirect to http://intranet.corp.local/"/>
+</port>
+<port protocol="tcp" portid="443">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="https" product="nginx" version="1.18.0"/>
+<script id="ssl-cert" output="Subject: commonName=app.corp.local&#xa;Subject Alternative Name: DNS:app.corp.local, DNS:dev.app.corp.local, DNS:*.corp.local, IP:10.10.10.5">
+<table key="subject">
+<elem key="commonName">app.corp.local</elem>
+<elem key="organizationName">Corp Ltd</elem>
+</table>
+<table key="extensions">
+<table>
+<elem key="name">X509v3 Subject Alternative Name</elem>
+<elem key="value">DNS:app.corp.local, DNS:dev.app.corp.local, DNS:*.corp.local, IP:10.10.10.5</elem>
+</table>
+</table>
+</script>
+</port>
+<port protocol="tcp" portid="445">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="microsoft-ds"/>
+</port>
+</ports>
+<hostscript>
+<script id="smb-os-discovery" output="OS: Windows Server 2019&#xa;FQDN: app.corp.local&#xa;Domain: CORP">
+<elem key="os">Windows Server 2019</elem>
+<elem key="fqdn">app.corp.local</elem>
+<elem key="domain_dns_name">corp.local</elem>
+<elem key="domain">CORP</elem>
+</script>
+</hostscript>
+</host>
+<host starttime="0" endtime="0">
+<address addr="10.10.10.99" addrtype="ipv4"/>
+<hostnames>
+<hostname name="other.corp.local" type="user"/>
+</hostnames>
+<ports>
+<port protocol="tcp" portid="22">
+<state state="open" reason="syn-ack" reason_ttl="0"/>
+<service name="ssh"/>
+</port>
+</ports>
+</host>
+</nmaprun>

@@ -1,6 +1,7 @@
 """Nmap scan parsing — XML, normal (.nmap), and grepable (.gnmap)."""
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -227,3 +228,137 @@ def parse_nmap_grepable(path: Path) -> list[dict[str, str]]:
             )
 
     return services
+
+
+@dataclass(frozen=True)
+class HostnameCandidate:
+    """A hostname found in scan output, tagged with where it came from."""
+
+    hostname: str
+    source: str
+    ip: str | None = None
+
+
+_IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+_HTTP_REDIRECT_RE = re.compile(r"redirect to https?://([^/:\s]+)", re.IGNORECASE)
+_SAN_ENTRY_RE = re.compile(r"DNS:([^,\s]+)")
+
+
+def _looks_like_hostname(value: str) -> bool:
+    name = value.strip().strip(".")
+    if not name or " " in name:
+        return False
+    if "*" in name:
+        return False
+    if _IPV4_RE.match(name):
+        return False
+    return any(ch.isalpha() for ch in name)
+
+
+def extract_hostname_candidates(xml_path: Path) -> list[HostnameCandidate]:
+    """Pull hostname candidates from an nmap XML scan.
+
+    Sources covered:
+    - <hostnames><hostname> (user-supplied or PTR)
+    - ssl-cert script: subject commonName + Subject Alternative Name DNS entries
+    - http-title script: hostname in "redirect to ..." output
+    - smb-os-discovery script: fqdn
+
+    Returns an order-preserving list with duplicates intact (deduplication
+    happens at the aggregation layer where source merging is meaningful).
+    """
+    root = ElementTree.parse(xml_path).getroot()
+    candidates: list[HostnameCandidate] = []
+
+    for host in root.findall("host"):
+        address = host.find("address[@addrtype='ipv4']")
+        if address is None:
+            address = host.find("address")
+        host_ip = address.get("addr") if address is not None else None
+
+        for hostname_node in host.findall("hostnames/hostname"):
+            name = hostname_node.get("name") or ""
+            if _looks_like_hostname(name):
+                candidates.append(
+                    HostnameCandidate(hostname=name, source="dns", ip=host_ip)
+                )
+
+        for script in host.findall("ports/port/script"):
+            candidates.extend(_candidates_from_script(script, host_ip))
+
+        for script in host.findall("hostscript/script"):
+            candidates.extend(_candidates_from_script(script, host_ip))
+
+    return candidates
+
+
+def _candidates_from_script(
+    script: ElementTree.Element, host_ip: str | None
+) -> list[HostnameCandidate]:
+    sid = script.get("id", "")
+    if sid == "ssl-cert":
+        return _ssl_cert_candidates(script, host_ip)
+    if sid == "http-title":
+        return _http_title_candidates(script, host_ip)
+    if sid == "smb-os-discovery":
+        return _smb_os_discovery_candidates(script, host_ip)
+    return []
+
+
+def _ssl_cert_candidates(
+    script: ElementTree.Element, host_ip: str | None
+) -> list[HostnameCandidate]:
+    out: list[HostnameCandidate] = []
+    for subject_table in script.findall("table[@key='subject']"):
+        for elem in subject_table.findall("elem[@key='commonName']"):
+            name = (elem.text or "").strip()
+            if _looks_like_hostname(name):
+                out.append(
+                    HostnameCandidate(hostname=name, source="ssl-cert CN", ip=host_ip)
+                )
+
+    for ext_value in script.iter("elem"):
+        if ext_value.get("key") != "value":
+            continue
+        text = ext_value.text or ""
+        if "DNS:" not in text:
+            continue
+        for match in _SAN_ENTRY_RE.finditer(text):
+            name = match.group(1).strip().strip(".")
+            if _looks_like_hostname(name):
+                out.append(
+                    HostnameCandidate(hostname=name, source="ssl-cert SAN", ip=host_ip)
+                )
+
+    return out
+
+
+def _http_title_candidates(
+    script: ElementTree.Element, host_ip: str | None
+) -> list[HostnameCandidate]:
+    output = script.get("output", "") or ""
+    out: list[HostnameCandidate] = []
+    for match in _HTTP_REDIRECT_RE.finditer(output):
+        name = match.group(1).strip().strip(".")
+        if _looks_like_hostname(name):
+            out.append(
+                HostnameCandidate(
+                    hostname=name, source="http-title redirect", ip=host_ip
+                )
+            )
+    return out
+
+
+def _smb_os_discovery_candidates(
+    script: ElementTree.Element, host_ip: str | None
+) -> list[HostnameCandidate]:
+    out: list[HostnameCandidate] = []
+    for elem in script.findall("elem[@key='fqdn']"):
+        name = (elem.text or "").strip().strip(".")
+        if _looks_like_hostname(name):
+            out.append(
+                HostnameCandidate(
+                    hostname=name, source="smb-os-discovery FQDN", ip=host_ip
+                )
+            )
+    return out

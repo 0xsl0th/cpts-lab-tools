@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from reconlab.nmap import (
+    extract_hostname_candidates,
     merge_scan_results,
     parse_nmap_grepable,
     parse_nmap_normal,
@@ -210,3 +211,41 @@ def test_merge_scan_results_sorts_by_host_proto_port() -> None:
         ("3389", "tcp"),
         ("53", "udp"),
     ]
+
+
+SCRIPTED_XML_FIXTURE = FIXTURES / "sample_nmap_with_scripts.xml"
+
+
+def test_extract_hostname_candidates_pulls_from_all_sources() -> None:
+    candidates = extract_hostname_candidates(SCRIPTED_XML_FIXTURE)
+    by_source: dict[str, set[str]] = {}
+    for c in candidates:
+        by_source.setdefault(c.source, set()).add(c.hostname)
+
+    assert "app.corp.local" in by_source["dns"]
+    assert by_source["ssl-cert CN"] == {"app.corp.local"}
+    assert by_source["ssl-cert SAN"] == {"app.corp.local", "dev.app.corp.local"}
+    assert by_source["http-title redirect"] == {"intranet.corp.local"}
+    assert by_source["smb-os-discovery FQDN"] == {"app.corp.local"}
+
+
+def test_extract_hostname_candidates_filters_wildcards_and_ips() -> None:
+    candidates = extract_hostname_candidates(SCRIPTED_XML_FIXTURE)
+    names = {c.hostname for c in candidates}
+    assert "*.corp.local" not in names
+    assert "10.10.10.5" not in names
+
+
+def test_extract_hostname_candidates_includes_per_host_ip() -> None:
+    candidates = extract_hostname_candidates(SCRIPTED_XML_FIXTURE)
+    by_host = {c.ip for c in candidates}
+    assert "10.10.10.5" in by_host
+    assert "10.10.10.99" in by_host
+    other = [c for c in candidates if c.hostname == "other.corp.local"]
+    assert other and other[0].ip == "10.10.10.99"
+
+
+def test_extract_hostname_candidates_empty_for_scan_without_scripts() -> None:
+    candidates = extract_hostname_candidates(XML_FIXTURE)
+    sources = {c.source for c in candidates}
+    assert sources <= {"dns"}
