@@ -52,19 +52,46 @@ from .workspace import (
 app = typer.Typer(
     help="Minimal helpers for authorized penetration-testing lab organization and reporting.",
     rich_markup_mode="markdown",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace init target --ip <ip> --host <host>` -- start a new workspace\n\n\n\n"
+        "`reconlab workspace suggest` -- generate methodology from scans/\n\n\n\n"
+        "`reconlab make-hosts` -- suggest an /etc/hosts entry\n\n\n\n"
+        "`reconlab finding add --title '...' --severity high --service smb` -- record a finding\n\n\n\n"
+        "Run `reconlab <command> --help` for per-command examples."
+    ),
 )
 workspace_app = typer.Typer(
     help="Manage lab workspaces (folders, metadata, scan-driven methodology).",
     rich_markup_mode="markdown",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace init target --ip <ip> --host <host> --domain <domain>`\n\n\n\n"
+        "`reconlab workspace suggest`\n\n\n\n"
+        "`reconlab workspace status`\n\n\n\n"
+        "`reconlab workspace ingest-web --status 200,301,403`\n\n\n\n"
+        "`reconlab workspace check`"
+    ),
 )
 finding_app = typer.Typer(
     help="Record and list engagement findings inside a workspace's report.md.",
     rich_markup_mode="markdown",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab finding add --title 'SMB null session' --severity high --service smb`\n\n\n\n"
+        "`reconlab finding list`"
+    ),
 )
 workflow_app = typer.Typer(
     help="Inspect the service workflow registry - list available workflows and "
     "print one to stdout without needing a workspace or a scan.",
     rich_markup_mode="markdown",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workflow list`\n\n\n\n"
+        "`reconlab workflow show smb`\n\n\n\n"
+        "`reconlab workflow show ad-foothold --domain <domain>`"
+    ),
 )
 app.add_typer(workspace_app, name="workspace")
 app.add_typer(finding_app, name="finding")
