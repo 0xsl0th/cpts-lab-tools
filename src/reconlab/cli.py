@@ -46,6 +46,7 @@ from .workspace import (
     find_latest_scan,
     init_workspace,
     read_metadata,
+    scans_have_no_xml,
 )
 
 app = typer.Typer(
@@ -479,6 +480,7 @@ def _emit_workspace_hosts(
         typer.echo("")
         typer.echo("# Add this to /etc/hosts (IP only - add hostnames manually):")
         typer.echo(resolved_ip)
+        _print_xml_hint(workspace_path)
         return
 
     typer.echo("# Hostname candidates:")
@@ -489,6 +491,17 @@ def _emit_workspace_hosts(
 
     hostnames = [agg.hostname for agg in aggregated]
     _print_hosts_line(resolved_ip, hostnames)
+    _print_xml_hint(workspace_path)
+
+
+def _print_xml_hint(workspace: Path) -> None:
+    """Nudge users toward `nmap -oA` when scans/ has only non-XML files."""
+    if not scans_have_no_xml(workspace):
+        return
+    typer.echo("")
+    typer.echo("# tip: scans/ has no XML files; hostname enrichment from")
+    typer.echo("# ssl-cert / http-title / smb-os-discovery needs XML.")
+    typer.echo("# Re-run nmap with `-oA <basename>` to also write XML.")
 
 
 def _print_hosts_line(target_ip: str, hostnames: list[str]) -> None:

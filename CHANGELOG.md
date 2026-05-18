@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   FQDN form (`host.domain`) when `--domain` is also passed. Removes the
   need to re-type IP/host just to format the hosts entry. Still read-only -
   reconlab never modifies `/etc/hosts` itself.
+- **`make-hosts` workspace mode now prints a tip when `scans/` has only
+  non-XML files** (`.nmap` / `.gnmap` only, no `.xml`). NSE script output
+  only exists in structured form in XML, so users dumping text-only nmap
+  output were silently missing the ssl-cert / http-title / smb-os-discovery
+  enrichment. The tip nudges them toward `nmap -oA <basename>`. Silent when
+  XML is present or `scans/` is empty.
 
 ## [0.7.0] - 2026-05-15
 

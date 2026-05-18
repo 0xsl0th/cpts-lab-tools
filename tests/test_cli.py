@@ -1449,3 +1449,39 @@ def test_make_hosts_workspace_mode_uses_metadata_host(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert "manual.corp.local" in result.output
     assert "metadata target_host" in result.output
+
+
+def test_make_hosts_workspace_mode_prints_xml_hint_when_only_non_xml_scans(
+    tmp_path: Path,
+) -> None:
+    workspace = _make_workspace_with_scripted_scan(
+        tmp_path, host="primary.corp.local", include_scan=False
+    )
+    (workspace / "scans" / "scan.nmap").write_text("Nmap done", encoding="utf-8")
+    result = runner.invoke(app, ["make-hosts", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "scans/ has no XML files" in result.output
+    assert "-oA <basename>" in result.output
+
+
+def test_make_hosts_workspace_mode_omits_xml_hint_when_xml_present(
+    tmp_path: Path,
+) -> None:
+    workspace = _make_workspace_with_scripted_scan(tmp_path)
+    result = runner.invoke(app, ["make-hosts", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "scans/ has no XML files" not in result.output
+
+
+def test_make_hosts_workspace_mode_omits_xml_hint_when_no_scans(
+    tmp_path: Path,
+) -> None:
+    workspace = _make_workspace_with_scripted_scan(
+        tmp_path, host="primary.corp.local", include_scan=False
+    )
+    result = runner.invoke(app, ["make-hosts", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "scans/ has no XML files" not in result.output

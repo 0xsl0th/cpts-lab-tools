@@ -13,6 +13,7 @@ from reconlab.workspace import (
     init_workspace,
     read_metadata,
     report_scaffold,
+    scans_have_no_xml,
     write_metadata,
 )
 
@@ -322,3 +323,26 @@ def test_collect_hostname_candidates_returns_none_ip_when_unset(
     resolved_ip, aggregated = collect_hostname_candidates(workspace)
     assert resolved_ip is None
     assert aggregated == []
+
+
+def test_scans_have_no_xml_false_when_scans_dir_empty(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, include_scan=False)
+    assert scans_have_no_xml(workspace) is False
+
+
+def test_scans_have_no_xml_false_when_xml_present(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path)
+    assert scans_have_no_xml(workspace) is False
+
+
+def test_scans_have_no_xml_false_when_mixed(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path)
+    (workspace / "scans" / "extra.nmap").write_text("Nmap done", encoding="utf-8")
+    assert scans_have_no_xml(workspace) is False
+
+
+def test_scans_have_no_xml_true_when_only_non_xml(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, include_scan=False)
+    (workspace / "scans" / "scan.nmap").write_text("Nmap done", encoding="utf-8")
+    (workspace / "scans" / "scan.gnmap").write_text("# Nmap done", encoding="utf-8")
+    assert scans_have_no_xml(workspace) is True

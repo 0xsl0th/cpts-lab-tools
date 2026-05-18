@@ -236,6 +236,19 @@ def find_all_web_files(web_dir: Path) -> list[Path]:
     return sorted(candidates, key=lambda p: p.stat().st_mtime)
 
 
+def scans_have_no_xml(workspace: Path) -> bool:
+    """True when scans/ has at least one scan file but none are XML.
+
+    NSE script output (ssl-cert SANs, http-title redirects, smb-os-discovery
+    FQDN) is only structured in XML; the text and grepable formats either
+    drop it or only carry it as free text. Callers use this to nudge users
+    toward `nmap -oA` when they would otherwise miss script-driven
+    enrichment.
+    """
+    scans = find_all_scans(workspace / "scans")
+    return bool(scans) and not any(p.suffix.lower() == ".xml" for p in scans)
+
+
 @dataclass
 class AggregatedHostname:
     """A deduplicated hostname with every source that mentioned it."""
