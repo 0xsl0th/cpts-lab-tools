@@ -208,14 +208,14 @@ Pass an IP followed by one or more hostnames when you just want to format a
 line without involving a workspace:
 
 ```bash
-reconlab make-hosts 10.10.10.5 app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
+reconlab make-hosts <ip> app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
 ```
 
 Or the equivalent flag form:
 
 ```bash
 reconlab make-hosts \
-  --ip 10.10.10.5 \
+  --ip <ip> \
   --host app.corp.local \
   --aliases dev.corp.local Dev.corp.local DEV.corp.local
 ```
@@ -235,7 +235,7 @@ persists target metadata so downstream commands inherit it.
 
 ```bash
 reconlab workspace init target \
-  --ip 10.10.10.5 \
+  --ip <ip> \
   --host app.corp.local \
   --domain corp.local \
   --platform lab \
@@ -311,8 +311,8 @@ parallel to how `workspace suggest` merges every nmap scan in `scans/`.
 
 ```bash
 # After running content discovery against an HTTP service:
-feroxbuster -u http://10.10.10.5 --json -o ~/labs/target/web/initial.json
-gobuster dir -u http://10.10.10.5 -w wordlist.txt -o ~/labs/target/web/dir.txt
+feroxbuster -u http://<ip> --json -o ~/labs/target/web/initial.json
+gobuster dir -u http://<ip> -w wordlist.txt -o ~/labs/target/web/dir.txt
 
 # From inside the workspace, or point at one explicitly:
 reconlab workspace ingest-web
@@ -476,15 +476,15 @@ Supported input formats:
 reconlab suggest-next \
   -i scans/target \
   --input-format auto \
-  --target 10.10.10.5 \
+  --target <ip> \
   --host app.corp.local \
   --domain corp.local \
   -o outputs/next.md
 
 # Force a specific parser
-reconlab suggest-next -i scans/target.nmap  --input-format normal   --target 10.10.10.5
-reconlab suggest-next -i scans/target.gnmap --input-format grepable --target 10.10.10.5
-reconlab suggest-next -i scans/target.xml   --input-format xml      --target 10.10.10.5
+reconlab suggest-next -i scans/target.nmap  --input-format normal   --target <ip>
+reconlab suggest-next -i scans/target.gnmap --input-format grepable --target <ip>
+reconlab suggest-next -i scans/target.xml   --input-format xml      --target <ip>
 ```
 
 The simplest invocation derives the target IP from the scan and prints Markdown to
@@ -533,7 +533,7 @@ parents) if it does not already exist.
 ```bash
 reconlab suggest-next \
   -i scans/target \
-  --target 10.10.10.5 \
+  --target <ip> \
   --host app.corp.local \
   --domain corp.local \
   --output-format obsidian \
