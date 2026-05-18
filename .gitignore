@@ -19,9 +19,6 @@ env/
 .vscode/
 .idea/
 
-# Claude Code local settings
-.claude/
-
 # Local generated lab/tool outputs
 outputs/
 evidence/
