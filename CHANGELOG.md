@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-05-17
+
+### Changed
+
+- **Top-level and subgroup `--help` pages now also end with `Examples`
+  blocks.** 0.9.0 added Examples to every leaf command but left
+  `reconlab --help`, `reconlab workspace --help`, `reconlab finding --help`,
+  and `reconlab workflow --help` without one. They now each include a brief
+  block of representative invocations, matching the leaf-command pattern.
+
 ## [0.9.0] - 2026-05-17
 
 ### Changed
