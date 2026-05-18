@@ -273,15 +273,15 @@ requests itself.
 ```text
 # Workspace: /home/op/labs/target
 # Target IP: <ip>
-# Discovered vhosts (excluding metadata target_host 'app'):
+# Discovered vhosts (excluding metadata target_host '<host>'):
 
-# intranet.corp.local (http-title redirect)
-curl -I -H 'Host: intranet.corp.local' http://<ip>/
-gobuster dir -u http://<ip>/ -H 'Host: intranet.corp.local' -w <wordlist> -o web/intranet.corp.local.txt
+# <host-2> (http-title redirect)
+curl -I -H 'Host: <host-2>' http://<ip>/
+gobuster dir -u http://<ip>/ -H 'Host: <host-2>' -w <wordlist> -o web/<host-2>.txt
 
-# dev.app.corp.local (ssl-cert SAN)
-curl -I -H 'Host: dev.app.corp.local' http://<ip>/
-gobuster dir -u http://<ip>/ -H 'Host: dev.app.corp.local' -w <wordlist> -o web/dev.app.corp.local.txt
+# <host-3> (ssl-cert SAN)
+curl -I -H 'Host: <host-3>' http://<ip>/
+gobuster dir -u http://<ip>/ -H 'Host: <host-3>' -w <wordlist> -o web/<host-3>.txt
 ```
 
 If scans/ contains only non-XML output (`.nmap` / `.gnmap`, no `.xml`),
