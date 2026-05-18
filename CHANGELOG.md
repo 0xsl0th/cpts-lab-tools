@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-05-17
+
+### Changed
+
+- **Polished the top-level `reconlab --help` Examples walkthrough.** Step
+  descriptions and standalone-utility annotations now use `:` separators
+  instead of `--` (reads as prose, no longer conflicts with the heading).
+  A `---` horizontal rule visually divides the walkthrough from the
+  "Standalone utilities" section. The `workspace status` callout is now an
+  inline "Tip:" at the end of the walkthrough instead of an "Anytime:"
+  break that disrupted the numbered cadence.
+- **Swapped the web content-discovery example from feroxbuster to gobuster.**
+  Reconlab still parses both formats; the step description continues to
+  mention both. The example just shows gobuster as the more commonly-used
+  one-liner.
+
 ## [0.9.2] - 2026-05-17
 
 ### Changed
