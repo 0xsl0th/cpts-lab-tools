@@ -50,17 +50,21 @@ from .workspace import (
 )
 
 app = typer.Typer(
-    help="Minimal helpers for authorized penetration-testing lab organization and reporting."
+    help="Minimal helpers for authorized penetration-testing lab organization and reporting.",
+    rich_markup_mode="markdown",
 )
 workspace_app = typer.Typer(
-    help="Manage lab workspaces (folders, metadata, scan-driven methodology)."
+    help="Manage lab workspaces (folders, metadata, scan-driven methodology).",
+    rich_markup_mode="markdown",
 )
 finding_app = typer.Typer(
-    help="Record and list engagement findings inside a workspace's report.md."
+    help="Record and list engagement findings inside a workspace's report.md.",
+    rich_markup_mode="markdown",
 )
 workflow_app = typer.Typer(
     help="Inspect the service workflow registry - list available workflows and "
-    "print one to stdout without needing a workspace or a scan."
+    "print one to stdout without needing a workspace or a scan.",
+    rich_markup_mode="markdown",
 )
 app.add_typer(workspace_app, name="workspace")
 app.add_typer(finding_app, name="finding")
@@ -289,7 +293,14 @@ def format_services(services: list[dict[str, str]]) -> str:
     return "\n".join([render_row(headers), separator, *(render_row(row) for row in rows)])
 
 
-@app.command("parse-nmap")
+@app.command(
+    "parse-nmap",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab parse-nmap scans/initial.xml`\n\n\n\n"
+        "`reconlab parse-nmap ~/labs/target/scans/initial.xml`"
+    ),
+)
 def parse_nmap(
     xml_file: Annotated[
         Path,
@@ -309,7 +320,15 @@ def parse_nmap(
         raise typer.BadParameter(f"Invalid nmap XML: {exc}") from exc
 
 
-@app.command("parse-web")
+@app.command(
+    "parse-web",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab parse-web web/ferox.json`\n\n\n\n"
+        "`reconlab parse-web web/dirs.txt --status 200,301,403`\n\n\n\n"
+        "`reconlab parse-web web/scan.txt --input-format feroxbuster`"
+    ),
+)
 def parse_web(
     input_file: Annotated[
         Path,
@@ -355,7 +374,17 @@ def parse_web(
 _IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
 
 
-@app.command("make-hosts")
+@app.command(
+    "make-hosts",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab make-hosts` -- workspace mode (cwd)\n\n\n\n"
+        "`reconlab make-hosts ~/labs/target` -- workspace at path\n\n\n\n"
+        "`reconlab make-hosts --target-ip <ip>` -- override metadata IP\n\n\n\n"
+        "`reconlab make-hosts <ip> <host>` -- manual form (positional)\n\n\n\n"
+        "`reconlab make-hosts --ip <ip> --host <host>` -- manual form (flags)"
+    ),
+)
 def make_hosts(
     args: Annotated[
         list[str] | None,
@@ -513,7 +542,15 @@ def _print_hosts_line(target_ip: str, hostnames: list[str]) -> None:
     typer.echo(f'echo "{line}" | sudo tee -a /etc/hosts')
 
 
-@app.command("suggest-next")
+@app.command(
+    "suggest-next",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab suggest-next -i scans/initial.xml`\n\n\n\n"
+        "`reconlab suggest-next -i scans/initial --input-format auto --target <ip>`\n\n\n\n"
+        "`reconlab suggest-next -i scans/initial.xml --output-format obsidian -o notes/`"
+    ),
+)
 def suggest_next(
     input_file: Annotated[
         Path,
@@ -601,7 +638,15 @@ def suggest_next(
     )
 
 
-@workspace_app.command("init")
+@workspace_app.command(
+    "init",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace init target --ip <ip> --host <host> --domain <domain>`\n\n\n\n"
+        "`reconlab workspace init lab1 -o ~/labs`\n\n\n\n"
+        "`reconlab workspace init existing --force`"
+    ),
+)
 def workspace_init(
     name: Annotated[str, typer.Argument(help="Workspace name (used for the folder).")],
     target_ip: Annotated[
@@ -679,7 +724,17 @@ def _print_init_hosts_hint(workspace: Path) -> None:
     typer.echo(f'  echo "{line}" | sudo tee -a /etc/hosts')
 
 
-@workspace_app.command("suggest")
+@workspace_app.command(
+    "suggest",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace suggest` -- cwd, obsidian vault\n\n\n\n"
+        "`reconlab workspace suggest ~/labs/target`\n\n\n\n"
+        "`reconlab workspace suggest --output-format md`\n\n\n\n"
+        "`reconlab workspace suggest --output-format json`\n\n\n\n"
+        "`reconlab workspace suggest --latest` -- newest scan only"
+    ),
+)
 def workspace_suggest(
     path: Annotated[
         Path,
@@ -782,7 +837,14 @@ def workspace_suggest(
     )
 
 
-@workspace_app.command("status")
+@workspace_app.command(
+    "status",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace status` -- cwd\n\n\n\n"
+        "`reconlab workspace status ~/labs/target`"
+    ),
+)
 def workspace_status(
     path: Annotated[
         Path,
@@ -798,7 +860,15 @@ def workspace_status(
     typer.echo(format_status(status))
 
 
-@workspace_app.command("ingest-web")
+@workspace_app.command(
+    "ingest-web",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace ingest-web` -- cwd\n\n\n\n"
+        "`reconlab workspace ingest-web ~/labs/target`\n\n\n\n"
+        "`reconlab workspace ingest-web --status 200,301,403`"
+    ),
+)
 def workspace_ingest_web(
     path: Annotated[
         Path,
@@ -861,7 +931,14 @@ def workspace_ingest_web(
     typer.echo(format_web_results(merged))
 
 
-@workspace_app.command("check")
+@workspace_app.command(
+    "check",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace check` -- cwd, exits non-zero on issues\n\n\n\n"
+        "`reconlab workspace check ~/labs/target`"
+    ),
+)
 def workspace_check(
     path: Annotated[
         Path,
@@ -879,7 +956,14 @@ def workspace_check(
         raise typer.Exit(code=1)
 
 
-@finding_app.command("add")
+@finding_app.command(
+    "add",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab finding add --title 'SMB null session' --severity high --service smb`\n\n\n\n"
+        "`reconlab finding add --title 'Directory listing' --severity medium --service http --port 80 --evidence screenshots/dirlist.png`"
+    ),
+)
 def finding_add(
     title: Annotated[
         str,
@@ -952,7 +1036,14 @@ def finding_add(
     )
 
 
-@finding_app.command("list")
+@finding_app.command(
+    "list",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab finding list` -- cwd\n\n\n\n"
+        "`reconlab finding list ~/labs/target`"
+    ),
+)
 def finding_list(
     workspace: Annotated[
         Path,
@@ -1012,13 +1103,27 @@ def _format_workflow_table() -> str:
     return "\n".join([render_row(headers), separator, *(render_row(row) for row in rows)])
 
 
-@workflow_app.command("list")
+@workflow_app.command(
+    "list",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workflow list`"
+    ),
+)
 def workflow_list() -> None:
     """List every service workflow the tool knows about."""
     typer.echo(_format_workflow_table())
 
 
-@workflow_app.command("show")
+@workflow_app.command(
+    "show",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workflow show smb`\n\n\n\n"
+        "`reconlab workflow show ad-foothold --domain <domain>`\n\n\n\n"
+        "`reconlab workflow show http --ip <ip> --host <host>`"
+    ),
+)
 def workflow_show(
     service: Annotated[
         str,
