@@ -1,9 +1,9 @@
-"""Parse web content-discovery output (feroxbuster, gobuster) into normalized rows.
+"""Parse web content-discovery output (feroxbuster, gobuster, dirbuster) into normalized rows.
 
-`parse-web` reads feroxbuster (text or `--json`) or gobuster text output and
-prints a clean Status/Method/Size/URL table. Each parser returns a list of
-dicts with the same field shape, so downstream renderers don't care which
-tool produced the input.
+`parse-web` reads feroxbuster (text or `--json`), gobuster text, or DirBuster
+text-report output and prints a clean Status/Method/Size/URL table. Each
+parser returns a list of dicts with the same field shape, so downstream
+renderers don't care which tool produced the input.
 """
 
 from __future__ import annotations
@@ -41,12 +41,28 @@ _GOBUSTER_RE = re.compile(
     r"(?:\s+\[--> (?P<redirect>[^\]]+)\])?\s*$"
 )
 
+# DirBuster (OWASP) report section header:
+#   "Dirs found with a 200 response:"
+#   "Files found with a 301 response:"
+_DIRBUSTER_SECTION_RE = re.compile(
+    r"^(?:Dirs|Files) found with a (?P<status>\d+) response:\s*$"
+)
+# DirBuster base URL line near the top of the report:
+#   "http://target/"
+#   "https://target:8443"
+_DIRBUSTER_BASE_URL_RE = re.compile(r"^(?P<url>https?://\S+?)/?$")
+# DirBuster path line under a section (starts with /, no spaces):
+#   "/admin/"
+#   "/.git/HEAD"
+_DIRBUSTER_PATH_RE = re.compile(r"^(?P<path>/\S*)$")
+
 
 class WebFormat(str, Enum):
     AUTO = "auto"
     FEROXBUSTER = "feroxbuster"
     FEROXBUSTER_JSON = "feroxbuster-json"
     GOBUSTER = "gobuster"
+    DIRBUSTER = "dirbuster"
 
 
 def _strip_ansi(text: str) -> str:
@@ -129,12 +145,71 @@ def parse_gobuster_text(path: Path) -> list[dict[str, str]]:
     return results
 
 
+def parse_dirbuster_text(path: Path) -> list[dict[str, str]]:
+    """Parse DirBuster (OWASP) text-report output.
+
+    DirBuster reports are grouped by status: each section header is
+    `Dirs found with a NNN response:` or `Files found with a NNN response:`,
+    followed by paths (each line starts with `/`). The target base URL
+    appears on its own line near the top of the report and is prefixed onto
+    each path to produce the URL column. DirBuster does not record response
+    size, word, or line counts; those fields are filled with `-` placeholders.
+    """
+    base_url: str | None = None
+    current_status: str | None = None
+    results: list[dict[str, str]] = []
+
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.rstrip()
+        if not line:
+            continue
+        # Skip ornamental / meta lines.
+        if (
+            line.startswith("-")
+            or line.startswith("DirBuster")
+            or line.startswith("Report")
+            or line.startswith("Directories found")
+            or line.startswith("Files found during")
+        ):
+            continue
+
+        section_match = _DIRBUSTER_SECTION_RE.match(line)
+        if section_match:
+            current_status = section_match.group("status")
+            continue
+
+        if base_url is None:
+            base_match = _DIRBUSTER_BASE_URL_RE.match(line)
+            if base_match:
+                base_url = base_match.group("url")
+                continue
+
+        path_match = _DIRBUSTER_PATH_RE.match(line)
+        if path_match and current_status is not None:
+            url_path = path_match.group("path")
+            full_url = f"{base_url}{url_path}" if base_url else url_path
+            results.append(
+                {
+                    "status": current_status,
+                    "method": "GET",
+                    "size": "-",
+                    "words": "-",
+                    "lines": "-",
+                    "url": full_url,
+                    "redirect": "-",
+                }
+            )
+
+    return results
+
+
 def detect_format(path: Path) -> WebFormat:
     """Sniff the file content to guess the format.
 
-    Priority order: JSON (any line starts with `{` and parses) → gobuster
-    (matches the `path (Status: N) [Size: N]` shape) → feroxbuster text.
-    Falls back to feroxbuster text when nothing matches.
+    Priority order: JSON (any line starts with `{` and parses) → DirBuster
+    (distinctive header or `... found with a N response:` section line) →
+    gobuster (matches the `path (Status: N) [Size: N]` shape) → feroxbuster
+    text. Falls back to feroxbuster text when nothing matches.
     """
     text = path.read_text(encoding="utf-8", errors="replace")
     nonblank = [_strip_ansi(line) for line in text.splitlines() if line.strip()]
@@ -149,7 +224,11 @@ def detect_format(path: Path) -> WebFormat:
         except json.JSONDecodeError:
             pass
 
+    if first.startswith("DirBuster"):
+        return WebFormat.DIRBUSTER
     for line in nonblank[:50]:
+        if _DIRBUSTER_SECTION_RE.match(line):
+            return WebFormat.DIRBUSTER
         if _GOBUSTER_RE.match(line):
             return WebFormat.GOBUSTER
         if _FEROX_TEXT_RE.match(line):
@@ -168,6 +247,8 @@ def parse_web_results(path: Path, fmt: WebFormat) -> list[dict[str, str]]:
         return parse_feroxbuster_json(path)
     if fmt is WebFormat.GOBUSTER:
         return parse_gobuster_text(path)
+    if fmt is WebFormat.DIRBUSTER:
+        return parse_dirbuster_text(path)
     raise ValueError(f"Unsupported web format: {fmt!r}")
 
 

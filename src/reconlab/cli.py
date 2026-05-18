@@ -75,6 +75,7 @@ app = typer.Typer(
         "`reconlab workspace check`\n\n\n\n"
         "Tip: at any point, `reconlab workspace status` shows scans, methodology freshness, "
         "findings, web findings, and the suggested next step.\n\n\n\n"
+        "Tip: run `reconlab --install-completion` once to enable tab-completion in your shell.\n\n\n\n"
         "---\n\n\n\n"
         "**Standalone utilities (no workspace needed)**\n\n\n\n"
         "`reconlab parse-nmap scans/initial.xml`: tabular open-service summary\n\n\n\n"
@@ -377,7 +378,8 @@ def parse_nmap(
         "**Examples**\n\n\n\n"
         "`reconlab parse-web web/ferox.json`\n\n\n\n"
         "`reconlab parse-web web/dirs.txt --status 200,301,403`\n\n\n\n"
-        "`reconlab parse-web web/scan.txt --input-format feroxbuster`"
+        "`reconlab parse-web web/scan.txt --input-format feroxbuster`\n\n\n\n"
+        "`reconlab parse-web web/dirbuster.txt --input-format dirbuster`"
     ),
 )
 def parse_web(

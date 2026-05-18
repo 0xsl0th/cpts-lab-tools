@@ -1,0 +1,35 @@
+DirBuster 1.0-RC1 - Report
+http://10.10.10.5:80
+Report produced on Mon Jan 01 12:00:00 UTC 2026
+--------------------------------
+
+Directories found during testing:
+
+Dirs found with a 200 response:
+
+/
+/admin/
+/api/
+
+Dirs found with a 403 response:
+
+/private/
+/backup/
+
+--------------------------------
+Files found during testing:
+
+Files found with a 200 response:
+
+/robots.txt
+/sitemap.xml
+
+Files found with a 301 response:
+
+/login
+
+Files found with a 403 response:
+
+/.git/HEAD
+
+--------------------------------

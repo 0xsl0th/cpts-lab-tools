@@ -7,6 +7,7 @@ from reconlab.web import (
     filter_by_status,
     format_web_results,
     merge_web_results,
+    parse_dirbuster_text,
     parse_feroxbuster_json,
     parse_feroxbuster_text,
     parse_gobuster_text,
@@ -17,6 +18,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 FEROX_TEXT = FIXTURES / "sample_feroxbuster.txt"
 FEROX_JSON = FIXTURES / "sample_feroxbuster.json"
 GOBUSTER_TEXT = FIXTURES / "sample_gobuster.txt"
+DIRBUSTER_TEXT = FIXTURES / "sample_dirbuster.txt"
 
 
 def test_parse_feroxbuster_text_extracts_rows() -> None:
@@ -239,3 +241,89 @@ def test_merge_web_results_treats_method_status_url_as_compound_key() -> None:
     merged = merge_web_results([(Path("a.txt"), rows_a), (Path("b.txt"), rows_b)])
     # Same URL+status but different method → two rows.
     assert len(merged) == 2
+
+
+def test_parse_dirbuster_text_groups_paths_by_section_status() -> None:
+    rows = parse_dirbuster_text(DIRBUSTER_TEXT)
+    by_url = {r["url"]: r for r in rows}
+
+    assert by_url["http://10.10.10.5:80/admin/"]["status"] == "200"
+    assert by_url["http://10.10.10.5:80/private/"]["status"] == "403"
+    assert by_url["http://10.10.10.5:80/robots.txt"]["status"] == "200"
+    assert by_url["http://10.10.10.5:80/login"]["status"] == "301"
+    assert by_url["http://10.10.10.5:80/.git/HEAD"]["status"] == "403"
+
+
+def test_parse_dirbuster_text_emits_get_and_placeholders_for_size_words_lines() -> None:
+    rows = parse_dirbuster_text(DIRBUSTER_TEXT)
+    assert rows
+    for r in rows:
+        assert r["method"] == "GET"
+        assert r["size"] == "-"
+        assert r["words"] == "-"
+        assert r["lines"] == "-"
+        assert r["redirect"] == "-"
+
+
+def test_parse_dirbuster_text_prepends_base_url_to_paths(tmp_path: Path) -> None:
+    f = tmp_path / "report.txt"
+    f.write_text(
+        "DirBuster 1.0-RC1 - Report\n"
+        "https://app.corp.local:8443\n"
+        "--------------------------------\n"
+        "\n"
+        "Dirs found with a 200 response:\n"
+        "\n"
+        "/api/v1/\n",
+        encoding="utf-8",
+    )
+    rows = parse_dirbuster_text(f)
+    assert rows == [
+        {
+            "status": "200",
+            "method": "GET",
+            "size": "-",
+            "words": "-",
+            "lines": "-",
+            "url": "https://app.corp.local:8443/api/v1/",
+            "redirect": "-",
+        }
+    ]
+
+
+def test_parse_dirbuster_text_returns_empty_for_report_with_no_findings(
+    tmp_path: Path,
+) -> None:
+    f = tmp_path / "empty.txt"
+    f.write_text(
+        "DirBuster 1.0-RC1 - Report\n"
+        "http://10.10.10.5:80\n"
+        "Report produced on Mon Jan 01 12:00:00 UTC 2026\n"
+        "--------------------------------\n",
+        encoding="utf-8",
+    )
+    assert parse_dirbuster_text(f) == []
+
+
+def test_detect_format_recognizes_dirbuster_by_header() -> None:
+    assert detect_format(DIRBUSTER_TEXT) is WebFormat.DIRBUSTER
+
+
+def test_detect_format_recognizes_dirbuster_by_section_line(tmp_path: Path) -> None:
+    f = tmp_path / "no-header.txt"
+    f.write_text(
+        "http://10.10.10.5:80\n"
+        "\n"
+        "Dirs found with a 200 response:\n"
+        "\n"
+        "/admin/\n",
+        encoding="utf-8",
+    )
+    assert detect_format(f) is WebFormat.DIRBUSTER
+
+
+def test_parse_web_results_dispatches_to_dirbuster_parser() -> None:
+    auto_rows = parse_web_results(DIRBUSTER_TEXT, WebFormat.AUTO)
+    explicit_rows = parse_web_results(DIRBUSTER_TEXT, WebFormat.DIRBUSTER)
+    assert auto_rows == explicit_rows
+    assert any(r["url"].endswith("/admin/") for r in auto_rows)

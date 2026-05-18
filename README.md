@@ -29,13 +29,13 @@ python -m pip install -e ".[dev]"
 | `workspace init` | Scaffold a target folder, metadata file, and a richer report scaffold. |
 | `workspace suggest` | Generate methodology from `scans/` - merges every scan file by default. |
 | `workspace status` | Summarize a workspace - scans, methodology freshness, findings, web findings, and the next step. |
-| `workspace ingest-web` | Merge every feroxbuster / gobuster output in a workspace's `web/` folder into one table. |
+| `workspace ingest-web` | Merge every feroxbuster / gobuster / DirBuster output in a workspace's `web/` folder into one table. |
 | `workspace check` | Lint `report.md` for wrap-up readiness - unfilled findings and sections. Exits non-zero on issues. |
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry - no scan or workspace needed. |
 | `make-hosts` | Suggest an `/etc/hosts` entry - workspace-aware (pulls hostnames from scan output and metadata) with a manual no-workspace fallback. Read-only. |
 | `parse-nmap` | Tabular summary of open services from an nmap XML scan. |
-| `parse-web` | Tabular summary of feroxbuster / gobuster output (text or JSON). |
+| `parse-web` | Tabular summary of feroxbuster / gobuster / DirBuster output (text or JSON). |
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
 
 Run `reconlab --help` (or `reconlab <command> --help`) for full option
@@ -119,24 +119,26 @@ Host  Names   Port  Proto  Service  Product  Version
 <ip>  <host>  80    tcp    http     nginx    1.18.0
 ```
 
-### Parse feroxbuster / gobuster output
+### Parse feroxbuster / gobuster / DirBuster output
 
 `parse-web` ingests web content-discovery output and prints a clean
 Status/Method/Size/URL table. It auto-detects feroxbuster text, feroxbuster
-`--json`, and gobuster text formats, strips ANSI colours, and inlines redirect
-targets into the URL column.
+`--json`, gobuster text, and DirBuster (OWASP) report formats, strips ANSI
+colours, and inlines redirect targets into the URL column.
 
 ```bash
 # Auto-detect the format
 reconlab parse-web outputs/feroxbuster.txt
 reconlab parse-web outputs/feroxbuster.json
 reconlab parse-web outputs/gobuster.txt
+reconlab parse-web outputs/dirbuster.txt
 
 # Filter to specific status codes
 reconlab parse-web outputs/feroxbuster.txt --status 200,301,403
 
 # Force a specific parser
 reconlab parse-web outputs/scan.txt --input-format feroxbuster
+reconlab parse-web outputs/scan.txt --input-format dirbuster
 ```
 
 Example output:
@@ -151,8 +153,11 @@ Status  Method  Size  Words  Lines  URL
 ```
 
 gobuster doesn't track word/line counts, so those columns show `-` for gobuster
-input. Feroxbuster's `--json` format is parsed as newline-delimited JSON, with
-non-`response` entries (scan-config, report) filtered out.
+input. DirBuster reports don't record size / words / lines at all, so those
+three columns are all `-` for DirBuster input; URLs are reconstructed by
+prefixing the base target URL (parsed from the report header) onto each
+discovered path. Feroxbuster's `--json` format is parsed as newline-delimited
+JSON, with non-`response` entries (scan-config, report) filtered out.
 
 ### Make an `/etc/hosts` entry
 
