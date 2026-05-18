@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`vhost-suggest` command.** New top-level command that closes the loop
+  on the workspace-aware hostname extraction shipped in 0.8.0. After
+  `make-hosts` reveals new hostnames from ssl-cert SANs, http-title
+  redirects, or smb-os-discovery FQDN, `reconlab vhost-suggest` prints a
+  ready-to-run block per newly-discovered hostname: a `curl` probe plus a
+  `gobuster` enumeration command, both using the `Host` header so the
+  requests reach the target IP directly and do not depend on `/etc/hosts`
+  being set up. The metadata `target_host` (and its FQDN when `--domain`
+  is set) is excluded as the primary you have already mapped. Same
+  XML-only hint as `make-hosts` when scans/ contains only `.nmap` /
+  `.gnmap`. Read-only - reconlab never sends any requests itself.
+
+### Changed
+
+- **Top-level `--help` walkthrough now mentions `vhost-suggest`** as a
+  Tip between step 3 (re-run make-hosts) and step 4 (generate
+  methodology), so the natural follow-up after hostname discovery is
+  discoverable in the same place the prerequisite step lives.
+
 ## [0.11.0] - 2026-05-17
 
 ### Added

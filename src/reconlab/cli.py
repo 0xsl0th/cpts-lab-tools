@@ -64,6 +64,9 @@ app = typer.Typer(
         "**3. Re-run make-hosts**: now also pulls hostnames from ssl-cert SANs, "
         "http-title redirects, and smb-os-discovery FQDN that the scan exposed.\n\n\n\n"
         "`reconlab make-hosts`\n\n\n\n"
+        "**Tip:** for each newly-discovered hostname, "
+        "`reconlab vhost-suggest` prints a curl probe and gobuster enumeration "
+        "command using the Host header (no /etc/hosts dependency).\n\n\n\n"
         "**4. Generate methodology**: walks every scan in scans/ and writes a "
         "service-by-service checklist as an Obsidian vault (default), single Markdown file, or JSON.\n\n\n\n"
         "`reconlab workspace suggest`\n\n\n\n"
@@ -625,6 +628,106 @@ def _print_hosts_line(target_ip: str, hostnames: list[str]) -> None:
     typer.echo("")
     typer.echo("# Or run:")
     typer.echo(f'echo "{line}" | sudo tee -a /etc/hosts')
+
+
+@app.command(
+    "vhost-suggest",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab vhost-suggest` -- cwd\n\n\n\n"
+        "`reconlab vhost-suggest ~/labs/target` -- workspace at path\n\n\n\n"
+        "`reconlab vhost-suggest --target-ip <ip>` -- override metadata IP"
+    ),
+)
+def vhost_suggest(
+    workspace: Annotated[
+        Path,
+        typer.Argument(help="Workspace path (defaults to the current directory)."),
+    ] = Path("."),
+    target_ip: Annotated[
+        str | None,
+        typer.Option(
+            "--target-ip",
+            help=(
+                "Override the workspace's target IP for this run. Useful when "
+                "the workspace metadata has no IP set yet."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Emit ready-to-run vhost enumeration commands for each hostname discovered in scans/.
+
+    Reads workspace metadata for target_ip + target_host, plus the hostname
+    candidates extracted from every nmap XML scan in scans/ (ssl-cert SANs,
+    http-title redirects, smb-os-discovery FQDN, reverse DNS). For each
+    newly-discovered hostname (excluding the metadata target_host, which is
+    the primary you have already mapped), prints a curl probe and a gobuster
+    enumeration command that uses the Host header so /etc/hosts does not
+    need to be set up. Read-only - never sends any requests itself.
+    """
+    try:
+        resolved_ip, aggregated = collect_hostname_candidates(
+            workspace, target_ip=target_ip
+        )
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    if resolved_ip is None:
+        raise typer.BadParameter(
+            f"No target IP for workspace {workspace}. "
+            "Set `target_ip` in .reconlab.json or pass --target-ip."
+        )
+
+    metadata = read_metadata(workspace)
+    primary_names: set[str] = set()
+    if metadata.target_host:
+        primary_names.add(metadata.target_host.lower())
+        if metadata.domain and "." not in metadata.target_host:
+            primary_names.add(
+                f"{metadata.target_host}.{metadata.domain}".lower()
+            )
+
+    new_vhosts = [
+        agg for agg in aggregated if agg.hostname.lower() not in primary_names
+    ]
+
+    typer.echo(f"# Workspace: {workspace}")
+    typer.echo(f"# Target IP: {resolved_ip}")
+
+    if not new_vhosts:
+        typer.echo("# No new vhost candidates discovered in scans/.")
+        if scans_have_no_xml(workspace):
+            typer.echo("# tip: scans/ has no XML files; NSE script output")
+            typer.echo("# (ssl-cert SANs, http-title redirects, smb-os-discovery)")
+            typer.echo("# is only structured in XML. Re-run nmap with `-oA <basename>`.")
+        return
+
+    if metadata.target_host:
+        typer.echo(
+            f"# Discovered vhosts (excluding metadata target_host "
+            f"'{metadata.target_host}'):"
+        )
+    else:
+        typer.echo("# Discovered vhosts:")
+
+    for agg in new_vhosts:
+        sources = ", ".join(agg.sources)
+        typer.echo("")
+        typer.echo(f"# {agg.hostname} ({sources})")
+        typer.echo(
+            f"curl -I -H 'Host: {agg.hostname}' http://{resolved_ip}/"
+        )
+        typer.echo(
+            f"gobuster dir -u http://{resolved_ip}/ "
+            f"-H 'Host: {agg.hostname}' -w <wordlist> "
+            f"-o web/{agg.hostname}.txt"
+        )
+
+    typer.echo("")
+    typer.echo("# Note: the Host header sends each request to the target IP")
+    typer.echo("# directly, so /etc/hosts does not need to be set up for these")
+    typer.echo("# commands to work. Switch http:// to https:// (and add -k to")
+    typer.echo("# curl, -s https to gobuster) for TLS vhosts.")
 
 
 @app.command(

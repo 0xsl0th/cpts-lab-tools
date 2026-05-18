@@ -1563,3 +1563,80 @@ def test_make_hosts_workspace_mode_omits_xml_hint_when_no_scans(
 
     assert result.exit_code == 0, result.output
     assert "scans/ has no XML files" not in result.output
+
+
+def test_vhost_suggest_emits_commands_for_each_discovered_vhost(tmp_path: Path) -> None:
+    workspace = _make_workspace_with_scripted_scan(
+        tmp_path, host="app", domain="corp.local"
+    )
+    result = runner.invoke(app, ["vhost-suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    # Each newly discovered hostname gets a curl probe and a gobuster line.
+    assert "intranet.corp.local" in result.output
+    assert "dev.app.corp.local" in result.output
+    assert "curl -I -H 'Host: intranet.corp.local' http://10.10.10.5/" in result.output
+    assert (
+        "gobuster dir -u http://10.10.10.5/ -H 'Host: dev.app.corp.local'"
+        in result.output
+    )
+    # The metadata primary host (resolved to FQDN via --domain) is excluded.
+    assert "Host: app.corp.local" not in result.output
+
+
+def test_vhost_suggest_excludes_metadata_target_host_when_only_short_form(
+    tmp_path: Path,
+) -> None:
+    workspace = _make_workspace_with_scripted_scan(tmp_path, host="app.corp.local")
+    result = runner.invoke(app, ["vhost-suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "Host: app.corp.local" not in result.output  # primary excluded
+    assert "Host: dev.app.corp.local" in result.output  # different hostname
+
+
+def test_vhost_suggest_reports_no_candidates_when_workspace_has_no_scans(
+    tmp_path: Path,
+) -> None:
+    workspace = _make_workspace_with_scripted_scan(
+        tmp_path, host="primary.corp.local", include_scan=False
+    )
+    result = runner.invoke(app, ["vhost-suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "No new vhost candidates" in result.output
+    assert "gobuster" not in result.output
+
+
+def test_vhost_suggest_emits_xml_hint_when_only_non_xml_scans(tmp_path: Path) -> None:
+    workspace = _make_workspace_with_scripted_scan(
+        tmp_path, host="primary.corp.local", include_scan=False
+    )
+    (workspace / "scans" / "scan.nmap").write_text("Nmap done", encoding="utf-8")
+    result = runner.invoke(app, ["vhost-suggest", str(workspace)])
+
+    assert result.exit_code == 0, result.output
+    assert "scans/ has no XML files" in result.output
+
+
+def test_vhost_suggest_errors_when_no_target_ip(tmp_path: Path) -> None:
+    runner.invoke(app, ["workspace", "init", "target", "-o", str(tmp_path)])
+    result = runner.invoke(app, ["vhost-suggest", str(tmp_path / "target")])
+
+    assert result.exit_code != 0
+    assert "No target IP" in strip_ansi(result.output)
+
+
+def test_vhost_suggest_accepts_target_ip_override(tmp_path: Path) -> None:
+    runner.invoke(app, ["workspace", "init", "target", "-o", str(tmp_path)])
+    workspace = tmp_path / "target"
+    (workspace / "scans" / "scripted.xml").write_text(
+        SCRIPTED_XML_FIXTURE.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    result = runner.invoke(
+        app, ["vhost-suggest", str(workspace), "--target-ip", "10.10.10.5"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "# Target IP: 10.10.10.5" in result.output
+    assert "Host: app.corp.local" in result.output  # no metadata host -> nothing excluded

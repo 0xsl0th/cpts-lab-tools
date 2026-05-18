@@ -34,6 +34,7 @@ python -m pip install -e ".[dev]"
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry - no scan or workspace needed. |
 | `make-hosts` | Suggest an `/etc/hosts` entry - workspace-aware (pulls hostnames from scan output and metadata) with a manual no-workspace fallback. Read-only. |
+| `vhost-suggest` | For each hostname discovered in scans (ssl-cert SANs, http-title redirects, SMB FQDN), print a `curl` probe and a `gobuster` enumeration command. Read-only. |
 | `parse-nmap` | Tabular summary of open services from an nmap XML scan. |
 | `parse-web` | Tabular summary of feroxbuster / gobuster / DirBuster output (text or JSON). |
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
@@ -238,6 +239,45 @@ shell-natural `--aliases a b c` syntax works. Repeating the flag
 exactly as typed. Whether workspace mode or manual form runs is decided by the
 first positional: an IPv4 address routes to manual; anything else (or no args)
 routes to workspace mode.
+
+### Enumerate discovered vhosts
+
+After `make-hosts` reads ssl-cert SANs, http-title redirects, and SMB FQDN
+from your scan, the natural next step is to probe each newly-discovered
+hostname as a virtual host. `vhost-suggest` prints exactly the commands you
+need - one `curl` probe and one `gobuster` enumeration line per hostname -
+using the `Host` header so the requests go to the target IP directly and
+do not depend on `/etc/hosts` resolution.
+
+```bash
+# From inside the workspace, or pointed at one explicitly.
+reconlab vhost-suggest
+reconlab vhost-suggest ~/labs/target
+reconlab vhost-suggest --target-ip <ip>     # override metadata IP for the run
+```
+
+The metadata `target_host` (and its FQDN form when `--domain` is set) is
+excluded - that is your primary host, already mapped. Only the newly-
+discovered hostnames get suggestions. Read-only - reconlab never sends any
+requests itself.
+
+```text
+# Workspace: /home/op/labs/target
+# Target IP: <ip>
+# Discovered vhosts (excluding metadata target_host 'app'):
+
+# intranet.corp.local (http-title redirect)
+curl -I -H 'Host: intranet.corp.local' http://<ip>/
+gobuster dir -u http://<ip>/ -H 'Host: intranet.corp.local' -w <wordlist> -o web/intranet.corp.local.txt
+
+# dev.app.corp.local (ssl-cert SAN)
+curl -I -H 'Host: dev.app.corp.local' http://<ip>/
+gobuster dir -u http://<ip>/ -H 'Host: dev.app.corp.local' -w <wordlist> -o web/dev.app.corp.local.txt
+```
+
+If scans/ contains only non-XML output (`.nmap` / `.gnmap`, no `.xml`),
+the command prints the same XML-only hint as `make-hosts` since the script
+data needed for vhost discovery only exists in XML.
 
 ### Manage a lab workspace
 
