@@ -128,15 +128,15 @@ targets into the URL column.
 
 ```bash
 # Auto-detect the format
-cpts-tools parse-web outputs/feroxbuster.txt
-cpts-tools parse-web outputs/feroxbuster.json
-cpts-tools parse-web outputs/gobuster.txt
+reconlab parse-web outputs/feroxbuster.txt
+reconlab parse-web outputs/feroxbuster.json
+reconlab parse-web outputs/gobuster.txt
 
 # Filter to specific status codes
-cpts-tools parse-web outputs/feroxbuster.txt --status 200,301,403
+reconlab parse-web outputs/feroxbuster.txt --status 200,301,403
 
 # Force a specific parser
-cpts-tools parse-web outputs/scan.txt --input-format feroxbuster
+reconlab parse-web outputs/scan.txt --input-format feroxbuster
 ```
 
 Example output:
