@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-05-17
+
+### Changed
+
+- **Every command's `--help` now ends with an `Examples` block** showing 2-5
+  concrete invocations covering its main usage patterns. Covers the top-level
+  commands (`parse-nmap`, `parse-web`, `make-hosts`, `suggest-next`) plus
+  every `workspace`, `finding`, and `workflow` subcommand. Self-sufficient
+  `--help` means users no longer have to consult the README to discover the
+  common command shapes.
+
+### Internal
+
+- **Bumped `actions/checkout` v4 -> v6 and `actions/setup-python` v5 -> v6**
+  in both `publish.yml` and `tests.yml`. The previous majors ran on Node.js
+  20, which GitHub will force to Node 24 by default on 2026-06-02 and remove
+  entirely on 2026-09-16. The new majors support Node 24 natively, silencing
+  the deprecation warnings on every workflow run.
+
 ## [0.8.0] - 2026-05-17
 
 ### Changed
