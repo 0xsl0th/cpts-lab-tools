@@ -31,6 +31,7 @@ python -m pip install -e ".[dev]"
 | `workspace status` | Summarize a workspace - scans, methodology freshness, findings, web findings, and the next step. |
 | `workspace ingest-web` | Merge every feroxbuster / gobuster / DirBuster output in a workspace's `web/` folder into one table. |
 | `workspace check` | Lint `report.md` for wrap-up readiness - unfilled findings and sections. Exits non-zero on issues. |
+| `workspace archive` | Bundle a workspace into a portable `.tar.gz` for handoff or storage. Read-only on the workspace; excludes `__pycache__`, `.pyc`, `.DS_Store`, `.venv`, `.git`, ruff/mypy/pytest caches. |
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
 | `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry - no scan or workspace needed. |
 | `make-hosts` | Suggest an `/etc/hosts` entry - workspace-aware (pulls hostnames from scan output and metadata) with a manual no-workspace fallback. Read-only. |
@@ -422,6 +423,44 @@ Findings:
 but Impact and Remediation are always left for you - `workspace check` is the
 reminder that they, and the Executive Summary, still need attention. Like
 `workspace status`, it is read-only.
+
+### Archive a workspace for handoff
+
+`workspace archive` bundles the workspace into one `.tar.gz` so you can hand
+it off, attach it to a report, or stash it for posterity. Reconlab never
+modifies the workspace - only writes the tarball.
+
+```bash
+# From inside the workspace, or pointed at one explicitly.
+reconlab workspace archive
+reconlab workspace archive ~/labs/target
+
+# Custom output path
+reconlab workspace archive -o handoffs/target.tar.gz
+
+# Overwrite an existing archive
+reconlab workspace archive --force
+```
+
+The default output filename is `<workspace-name>-archive.tar.gz` in the
+current directory. Inside the tarball every member lives under
+`<workspace-name>/` so extracting gives you one clean folder. Workspace
+content is bundled verbatim - `.reconlab.json`, `report.md`, `scans/`,
+`web/`, `notes/`, `screenshots/`, `loot/`, `creds/`, `exploits/` - while
+cache and editor junk is filtered out:
+
+| Excluded by directory | Excluded by suffix | Excluded by name |
+|-----------------------|--------------------|------------------|
+| `__pycache__`, `.venv`, `venv`, `env`, `.git`, `.mypy_cache`, `.pytest_cache`, `.ruff_cache` | `.pyc`, `.pyo` | `.DS_Store`, `Thumbs.db` |
+
+```text
+Archived workspace 'target' -> /home/op/labs/target-archive.tar.gz
+  files: 42
+  size:  1.3 MiB
+```
+
+The output without `--force` errors if the target tarball already exists,
+so the command never silently overwrites a prior handoff.
 
 ### Record findings into the report
 

@@ -1,5 +1,6 @@
 import json
 import re
+import tarfile as _tarfile
 import time
 from pathlib import Path
 
@@ -1284,6 +1285,86 @@ def test_finding_list_severity_filter_applies_to_json_output(tmp_path: Path) -> 
     data = json.loads(result.output)
     assert len(data) == 1
     assert data[0]["title"] == "RCE in admin panel"
+
+
+def _seed_archivable_workspace(tmp_path: Path) -> Path:
+    runner.invoke(
+        app,
+        ["workspace", "init", "demo", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "demo"
+    (workspace / "scans" / "initial.nmap").write_text("Nmap done", encoding="utf-8")
+    (workspace / "web" / "dirs.txt").write_text("/admin (Status: 200) [Size: 1]\n", encoding="utf-8")
+    return workspace
+
+
+def test_workspace_archive_default_output_named_after_workspace(tmp_path: Path) -> None:
+    workspace = _seed_archivable_workspace(tmp_path)
+    # Run with the workspace path; default output goes to CWD which CliRunner sets
+    # to the test process cwd. Use isolated_filesystem so we control the output dir.
+    with runner.isolated_filesystem(temp_dir=tmp_path) as iso:
+        result = runner.invoke(app, ["workspace", "archive", str(workspace)])
+        assert result.exit_code == 0, result.output
+        archive = Path(iso) / "demo-archive.tar.gz"
+        assert archive.is_file()
+        with _tarfile.open(archive, "r:gz") as t:
+            names = {m.name for m in t.getmembers()}
+        assert "demo/.reconlab.json" in names
+        assert "demo/scans/initial.nmap" in names
+        assert "demo/web/dirs.txt" in names
+
+
+def test_workspace_archive_output_flag_writes_to_custom_path(tmp_path: Path) -> None:
+    workspace = _seed_archivable_workspace(tmp_path)
+    out = tmp_path / "handoff" / "demo.tar.gz"
+    result = runner.invoke(
+        app, ["workspace", "archive", str(workspace), "-o", str(out)]
+    )
+    assert result.exit_code == 0, result.output
+    assert out.is_file()
+
+
+def test_workspace_archive_refuses_to_overwrite_without_force(tmp_path: Path) -> None:
+    workspace = _seed_archivable_workspace(tmp_path)
+    out = tmp_path / "demo.tar.gz"
+    out.write_text("placeholder", encoding="utf-8")
+    result = runner.invoke(
+        app, ["workspace", "archive", str(workspace), "-o", str(out)]
+    )
+    assert result.exit_code != 0
+    assert "already exists" in strip_ansi(result.output)
+
+
+def test_workspace_archive_force_overwrites_existing(tmp_path: Path) -> None:
+    workspace = _seed_archivable_workspace(tmp_path)
+    out = tmp_path / "demo.tar.gz"
+    out.write_text("placeholder", encoding="utf-8")
+    result = runner.invoke(
+        app, ["workspace", "archive", str(workspace), "-o", str(out), "--force"]
+    )
+    assert result.exit_code == 0, result.output
+    # Real tarball replaces the placeholder text.
+    with _tarfile.open(out, "r:gz") as t:
+        names = {m.name for m in t.getmembers()}
+    assert "demo/.reconlab.json" in names
+
+
+def test_workspace_archive_errors_when_path_is_not_a_workspace(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["workspace", "archive", str(tmp_path)])
+    assert result.exit_code != 0
+    assert "workspace init" in strip_ansi(result.output)
+
+
+def test_workspace_archive_summary_reports_file_count_and_size(tmp_path: Path) -> None:
+    workspace = _seed_archivable_workspace(tmp_path)
+    out = tmp_path / "demo.tar.gz"
+    result = runner.invoke(
+        app, ["workspace", "archive", str(workspace), "-o", str(out)]
+    )
+    assert result.exit_code == 0, result.output
+    assert "Archived workspace 'demo'" in result.output
+    assert "files:" in result.output
+    assert "size:" in result.output
 
 
 def test_workflow_list_includes_known_services() -> None:

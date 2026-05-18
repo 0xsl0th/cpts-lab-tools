@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`workspace archive` command.** Bundles a workspace into one portable
+  `.tar.gz` so you can hand it off, attach it to a report, or stash it
+  for posterity. Closes the lifecycle story: init → scan → make-hosts →
+  vhost-suggest → suggest → ingest-web → finding add → check → **archive**.
+  Default output is `<workspace-name>-archive.tar.gz` in the current
+  directory; `-o/--output` for a custom path; `--force` to overwrite.
+  Includes every workspace file (`report.md`, `.reconlab.json`, `scans/`,
+  `web/`, `notes/`, `screenshots/`, `loot/`, `creds/`, `exploits/`) and
+  excludes cache/editor junk (`__pycache__`, `.pyc`/`.pyo`, `.DS_Store`,
+  `.venv`/`venv`/`env`, `.git`, ruff/mypy/pytest caches). Read-only on
+  the workspace.
+
+### Changed
+
+- **Top-level `--help` walkthrough now ends with step 8 `workspace
+  archive`** so the handoff step is discoverable from the same place as
+  the rest of the lifecycle.
+
 ## [0.13.0] - 2026-05-18
 
 ### Added

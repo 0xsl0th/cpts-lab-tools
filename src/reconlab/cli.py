@@ -43,6 +43,7 @@ from .workflows import lookup as lookup_workflow
 from .workflows import resolve as resolve_workflows
 from .workspace import (
     collect_hostname_candidates,
+    create_archive,
     find_all_scans,
     find_all_web_files,
     find_latest_scan,
@@ -78,6 +79,8 @@ app = typer.Typer(
         "`reconlab finding add --title 'SMB null session' --severity high --service smb`\n\n\n\n"
         "**7. Check the report is wrap-up ready** before handoff: exits non-zero if scaffold placeholders remain.\n\n\n\n"
         "`reconlab workspace check`\n\n\n\n"
+        "**8. Archive the workspace** for handoff or storage: bundles everything (report, scans, web, notes, findings, screenshots, loot, creds) into one `.tar.gz`, excluding cache and editor junk.\n\n\n\n"
+        "`reconlab workspace archive`\n\n\n\n"
         "Tip: at any point, `reconlab workspace status` shows scans, methodology freshness, "
         "findings, web findings, and the suggested next step.\n\n\n\n"
         "Tip: run `reconlab --install-completion` once to enable tab-completion in your shell.\n\n\n\n"
@@ -100,7 +103,8 @@ workspace_app = typer.Typer(
         "`reconlab workspace suggest`\n\n\n\n"
         "`reconlab workspace status`\n\n\n\n"
         "`reconlab workspace ingest-web --status 200,301,403`\n\n\n\n"
-        "`reconlab workspace check`"
+        "`reconlab workspace check`\n\n\n\n"
+        "`reconlab workspace archive`"
     ),
 )
 finding_app = typer.Typer(
@@ -1142,6 +1146,84 @@ def workspace_check(
     typer.echo(format_report_check(check))
     if not check.ok:
         raise typer.Exit(code=1)
+
+
+def _human_size(n: int) -> str:
+    """Compact byte count for terminal display - B / KiB / MiB / GiB."""
+    if n < 1024:
+        return f"{n} B"
+    units = ("KiB", "MiB", "GiB", "TiB")
+    value = float(n)
+    for unit in units:
+        value /= 1024
+        if value < 1024:
+            return f"{value:.1f} {unit}"
+    return f"{value:.1f} PiB"
+
+
+@workspace_app.command(
+    "archive",
+    epilog=(
+        "**Examples**\n\n\n\n"
+        "`reconlab workspace archive` -- cwd, writes <name>-archive.tar.gz here\n\n\n\n"
+        "`reconlab workspace archive ~/labs/target`\n\n\n\n"
+        "`reconlab workspace archive -o handoffs/target.tar.gz`\n\n\n\n"
+        "`reconlab workspace archive --force` -- overwrite existing archive"
+    ),
+)
+def workspace_archive(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Workspace path (defaults to the current directory)."),
+    ] = Path("."),
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help=(
+                "Output tarball path. Defaults to `<workspace-name>-archive.tar.gz` "
+                "in the current directory."
+            ),
+        ),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            help="Overwrite the output file if it already exists.",
+        ),
+    ] = False,
+) -> None:
+    """Bundle a workspace into a portable .tar.gz archive for handoff or storage.
+
+    Includes every workspace file (`report.md`, `.reconlab.json`, `scans/`,
+    `web/`, `notes/`, `screenshots/`, `loot/`, `creds/`, `exploits/`).
+    Excludes cache and editor junk (`__pycache__`, `.pyc`, `.DS_Store`, `.venv`,
+    `.git`, ruff/mypy/pytest caches). Read-only on the workspace.
+    """
+    try:
+        metadata = read_metadata(path)
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    resolved_output = output or Path.cwd() / f"{metadata.name}-archive.tar.gz"
+
+    if resolved_output.exists() and not force:
+        raise typer.BadParameter(
+            f"Output file {resolved_output} already exists. Pass --force to overwrite."
+        )
+    if resolved_output.exists() and force:
+        resolved_output.unlink()
+
+    try:
+        result = create_archive(path, resolved_output, archive_name=metadata.name)
+    except FileNotFoundError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    typer.echo(f"Archived workspace '{metadata.name}' -> {result.output}")
+    typer.echo(f"  files: {result.file_count}")
+    typer.echo(f"  size:  {_human_size(result.size_bytes)}")
 
 
 @finding_app.command(

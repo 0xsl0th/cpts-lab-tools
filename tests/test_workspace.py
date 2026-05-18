@@ -1,4 +1,5 @@
 import json
+import tarfile as _tarfile
 import time
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from reconlab.workspace import (
     WORKSPACE_FOLDERS,
     WorkspaceMetadata,
     collect_hostname_candidates,
+    create_archive,
     find_latest_scan,
     init_workspace,
     read_metadata,
@@ -346,3 +348,73 @@ def test_scans_have_no_xml_true_when_only_non_xml(tmp_path: Path) -> None:
     (workspace / "scans" / "scan.nmap").write_text("Nmap done", encoding="utf-8")
     (workspace / "scans" / "scan.gnmap").write_text("# Nmap done", encoding="utf-8")
     assert scans_have_no_xml(workspace) is True
+
+
+def _archive_member_names(tarball: Path) -> set[str]:
+    with _tarfile.open(tarball, "r:gz") as t:
+        return {m.name for m in t.getmembers()}
+
+
+def test_create_archive_bundles_workspace_under_named_top_dir(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, include_scan=False)
+    (workspace / "scans" / "initial.nmap").write_text("Nmap done", encoding="utf-8")
+    output = tmp_path / "out.tar.gz"
+
+    result = create_archive(workspace, output, archive_name="demo")
+
+    assert result.output == output.resolve()
+    assert result.file_count > 0
+    assert output.is_file()
+    names = _archive_member_names(output)
+    assert "demo/.reconlab.json" in names
+    assert "demo/report.md" in names
+    assert "demo/scans/initial.nmap" in names
+
+
+def test_create_archive_defaults_archive_name_to_workspace_dir_name(
+    tmp_path: Path,
+) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, include_scan=False)
+    output = tmp_path / "out.tar.gz"
+
+    create_archive(workspace, output)
+
+    names = _archive_member_names(output)
+    assert any(n.startswith(f"{workspace.name}/") for n in names)
+
+
+def test_create_archive_excludes_pycache_pyc_dsstore_and_caches(
+    tmp_path: Path,
+) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, include_scan=False)
+    junk_dir = workspace / "__pycache__"
+    junk_dir.mkdir()
+    (junk_dir / "cache.pyc").write_text("x", encoding="utf-8")
+    (workspace / "scans" / "stale.pyc").write_text("x", encoding="utf-8")
+    (workspace / ".DS_Store").write_text("x", encoding="utf-8")
+    (workspace / ".ruff_cache").mkdir()
+    (workspace / ".ruff_cache" / "x").write_text("x", encoding="utf-8")
+
+    output = tmp_path / "out.tar.gz"
+    create_archive(workspace, output, archive_name="ws")
+
+    names = _archive_member_names(output)
+    assert not any("__pycache__" in n for n in names)
+    assert not any(n.endswith(".pyc") for n in names)
+    assert not any(n.endswith(".DS_Store") for n in names)
+    assert not any(".ruff_cache" in n for n in names)
+
+
+def test_create_archive_raises_when_path_is_not_a_workspace(tmp_path: Path) -> None:
+    output = tmp_path / "out.tar.gz"
+    with pytest.raises(FileNotFoundError):
+        create_archive(tmp_path / "nope", output, archive_name="ws")
+
+
+def test_create_archive_refuses_to_overwrite_existing_output(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, include_scan=False)
+    output = tmp_path / "out.tar.gz"
+    output.write_text("placeholder", encoding="utf-8")
+
+    with pytest.raises(FileExistsError):
+        create_archive(workspace, output, archive_name="ws")

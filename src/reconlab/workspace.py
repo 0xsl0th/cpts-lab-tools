@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import tarfile
 from dataclasses import asdict, dataclass, field, fields
 from datetime import datetime, timezone
 from pathlib import Path
@@ -234,6 +235,78 @@ def find_all_web_files(web_dir: Path) -> list[Path]:
         if path.is_file() and path.suffix.lower() in WEB_EXTENSIONS
     ]
     return sorted(candidates, key=lambda p: p.stat().st_mtime)
+
+
+_ARCHIVE_EXCLUDE_DIRS: frozenset[str] = frozenset(
+    {"__pycache__", ".venv", "venv", "env", ".git", ".mypy_cache", ".pytest_cache", ".ruff_cache"}
+)
+_ARCHIVE_EXCLUDE_SUFFIXES: tuple[str, ...] = (".pyc", ".pyo")
+_ARCHIVE_EXCLUDE_NAMES: frozenset[str] = frozenset({".DS_Store", "Thumbs.db"})
+
+
+@dataclass
+class ArchiveResult:
+    """Outcome of `create_archive` - the tarball path, file count, and byte size."""
+
+    output: Path
+    file_count: int
+    size_bytes: int
+
+
+def create_archive(
+    workspace: Path,
+    output: Path,
+    *,
+    archive_name: str | None = None,
+) -> ArchiveResult:
+    """Bundle a workspace into a .tar.gz, excluding cache / editor / VCS noise.
+
+    The tarball stores every member under `archive_name/` (defaults to the
+    workspace's directory name) so extracting it produces one clean folder.
+    Excluded directories: __pycache__, .venv / venv / env, .git, ruff/mypy/
+    pytest cache dirs. Excluded by suffix: .pyc / .pyo. Excluded by name:
+    .DS_Store, Thumbs.db.
+
+    Raises FileNotFoundError when *workspace* is not a reconlab workspace
+    (no `.reconlab.json` present); raises FileExistsError when the output
+    file already exists (callers should validate / pass --force in CLI).
+    """
+    if not metadata_path(workspace).is_file():
+        raise FileNotFoundError(
+            f"No workspace metadata at {workspace}. Not a reconlab workspace."
+        )
+
+    workspace = workspace.resolve()
+    output = output.resolve()
+    if output.exists():
+        raise FileExistsError(f"Output file already exists: {output}")
+
+    top = archive_name or workspace.name
+    file_count = 0
+
+    def filter_member(tarinfo: tarfile.TarInfo) -> tarfile.TarInfo | None:
+        nonlocal file_count
+        rel = Path(tarinfo.name)
+        for part in rel.parts:
+            if part in _ARCHIVE_EXCLUDE_DIRS:
+                return None
+        if rel.name in _ARCHIVE_EXCLUDE_NAMES:
+            return None
+        if rel.suffix in _ARCHIVE_EXCLUDE_SUFFIXES:
+            return None
+        if tarinfo.isfile():
+            file_count += 1
+        return tarinfo
+
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(output, "w:gz") as tar:
+        tar.add(workspace, arcname=top, filter=filter_member)
+
+    return ArchiveResult(
+        output=output,
+        file_count=file_count,
+        size_bytes=output.stat().st_size,
+    )
 
 
 def scans_have_no_xml(workspace: Path) -> bool:
