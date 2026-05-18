@@ -208,7 +208,7 @@ Pass an IP followed by one or more hostnames when you just want to format a
 line without involving a workspace:
 
 ```bash
-reconlab make-hosts <ip> app.corp.local dev.corp.local Dev.corp.local DEV.corp.local
+reconlab make-hosts <ip> <host> dev.corp.local Dev.corp.local DEV.corp.local
 ```
 
 Or the equivalent flag form:
@@ -216,7 +216,7 @@ Or the equivalent flag form:
 ```bash
 reconlab make-hosts \
   --ip <ip> \
-  --host app.corp.local \
+  --host <host> \
   --aliases dev.corp.local Dev.corp.local DEV.corp.local
 ```
 
@@ -236,8 +236,8 @@ persists target metadata so downstream commands inherit it.
 ```bash
 reconlab workspace init target \
   --ip <ip> \
-  --host app.corp.local \
-  --domain corp.local \
+  --host <host> \
+  --domain <domain> \
   --platform lab \
   -o ~/labs
 ```
@@ -440,7 +440,7 @@ reconlab workflow show smb
 reconlab workflow show linux-privesc
 
 # Or substitute target metadata while rendering
-reconlab workflow show ad-foothold --domain corp.local
+reconlab workflow show ad-foothold --domain <domain>
 ```
 
 The Markdown is the same per-workflow content that `workspace suggest` and
@@ -477,8 +477,8 @@ reconlab suggest-next \
   -i scans/target \
   --input-format auto \
   --target <ip> \
-  --host app.corp.local \
-  --domain corp.local \
+  --host <host> \
+  --domain <domain> \
   -o outputs/next.md
 
 # Force a specific parser
@@ -534,8 +534,8 @@ parents) if it does not already exist.
 reconlab suggest-next \
   -i scans/target \
   --target <ip> \
-  --host app.corp.local \
-  --domain corp.local \
+  --host <host> \
+  --domain <domain> \
   --output-format obsidian \
   -o notes/target
 ```
