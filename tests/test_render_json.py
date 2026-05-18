@@ -98,7 +98,7 @@ def test_render_json_substitutes_target_placeholders() -> None:
 
 def test_render_json_keeps_target_host_placeholder_in_text_when_missing() -> None:
     # target.host is null, but workflow text keeps the literal [TARGET_HOST]
-    # placeholder — consistent with render_methodology / render_obsidian_vault.
+    # placeholder - consistent with render_methodology / render_obsidian_vault.
     rendered = render_json(_ctx(target_host=None, domain=None), resolve(["https"]))
     data = json.loads(rendered)
     assert data["target"]["host"] is None

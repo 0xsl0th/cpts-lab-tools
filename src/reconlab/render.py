@@ -124,7 +124,7 @@ def _after_foothold_lines() -> list[str]:
     ]
     for workflow in followups:
         lines.append(
-            f"- `reconlab workflow show {workflow.service_id}` — {workflow.title}"
+            f"- `reconlab workflow show {workflow.service_id}` - {workflow.title}"
         )
     lines.append("")
     return lines
@@ -134,12 +134,12 @@ def render_methodology(context: TargetContext, workflows: list[Workflow]) -> str
     host_line = context.target_host or "[TARGET_HOST]"
     domain_line = context.domain or "[DOMAIN]"
 
-    lines: list[str] = [f"# Methodology — {context.target_ip}", ""]
+    lines: list[str] = [f"# Methodology - {context.target_ip}", ""]
 
     lines.append("## Scope & Assumptions")
     lines.append("")
     lines.append(
-        "- Authorized penetration-testing lab target only — do not run these commands against systems you are not explicitly permitted to test."
+        "- Authorized penetration-testing lab target only - do not run these commands against systems you are not explicitly permitted to test."
     )
     lines.append(f"- Target IP: `{context.target_ip}`")
     lines.append(f"- Target host: `{host_line}`")
@@ -173,7 +173,7 @@ def render_methodology(context: TargetContext, workflows: list[Workflow]) -> str
         lines.append("")
         for svc in context.unmapped:
             label = (
-                f"- `{svc['port']}/{svc['proto']}` — "
+                f"- `{svc['port']}/{svc['proto']}` - "
                 f"{svc['service']} {svc['product']} {svc['version']}"
             ).rstrip()
             lines.append(label)
@@ -303,7 +303,7 @@ def _render_index(context: TargetContext, workflows: list[Workflow], has_unmappe
     lines.extend(
         _frontmatter(
             fields=[
-                ("title", f"Methodology — {context.target_ip}"),
+                ("title", f"Methodology - {context.target_ip}"),
                 ("target", context.target_ip),
                 ("target_host", host_line),
                 ("domain", domain_line),
@@ -313,13 +313,13 @@ def _render_index(context: TargetContext, workflows: list[Workflow], has_unmappe
         )
     )
 
-    lines.append(f"# Methodology — {context.target_ip}")
+    lines.append(f"# Methodology - {context.target_ip}")
     lines.append("")
 
     lines.append("## Scope & Assumptions")
     lines.append("")
     lines.append(
-        "- Authorized penetration-testing lab target only — do not run these commands against systems you are not explicitly permitted to test."
+        "- Authorized penetration-testing lab target only - do not run these commands against systems you are not explicitly permitted to test."
     )
     lines.append(f"- Target IP: `{context.target_ip}`")
     lines.append(f"- Target host: `{host_line}`")
@@ -387,7 +387,7 @@ def _render_unmapped(context: TargetContext) -> str:
     lines.append("")
     for svc in context.unmapped:
         label = (
-            f"- `{svc['port']}/{svc['proto']}` — "
+            f"- `{svc['port']}/{svc['proto']}` - "
             f"{svc['service']} {svc['product']} {svc['version']}"
         ).rstrip()
         lines.append(label)

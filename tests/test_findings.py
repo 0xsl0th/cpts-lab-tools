@@ -51,7 +51,7 @@ def test_render_finding_block_includes_required_fields() -> None:
     block = render_finding_block(finding, metadata)
     text = "\n".join(block)
 
-    assert "### Finding 1 — SMB null session enabled" in text
+    assert "### Finding 1 - SMB null session enabled" in text
     assert "**Severity:** High" in text
     assert "`10.10.10.5`" in text
     assert "(`target.corp.local`)" in text
@@ -100,9 +100,9 @@ def test_add_finding_replaces_placeholder_on_first_call(tmp_path: Path) -> None:
 
     assert number == 1
     report = (workspace / "report.md").read_text(encoding="utf-8")
-    assert "### Finding 1 — SMB null session enabled" in report
+    assert "### Finding 1 - SMB null session enabled" in report
     # Placeholder gone:
-    assert "### Finding 1 — _Title_" not in report
+    assert "### Finding 1 - _Title_" not in report
     # Sibling sections still intact:
     assert "## Evidence Index" in report
     assert "## Lessons Learned" in report
@@ -121,8 +121,8 @@ def test_add_finding_appends_after_existing(tmp_path: Path) -> None:
 
     assert second == 2
     report = (workspace / "report.md").read_text(encoding="utf-8")
-    assert "### Finding 1 — First" in report
-    assert "### Finding 2 — Second" in report
+    assert "### Finding 1 - First" in report
+    assert "### Finding 2 - Second" in report
     # Order is preserved:
     assert report.index("Finding 1") < report.index("Finding 2")
     # Findings stay inside the Findings section, not bleeding into siblings.
@@ -145,7 +145,7 @@ def test_add_finding_keeps_numbering_after_gaps(tmp_path: Path) -> None:
     new_lines = []
     skipping = False
     for line in lines:
-        if line == "### Finding 1 — A":
+        if line == "### Finding 1 - A":
             skipping = True
             continue
         if skipping and line.startswith("### Finding"):

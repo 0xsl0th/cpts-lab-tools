@@ -58,5 +58,5 @@ line-length = 100
 [tool.ruff.lint]
 # Basic, low-noise rule set: pyflakes (F) + import-related/statement/syntax
 # pycodestyle errors (E4/E7/E9) + import sorting (I). E501 is intentionally
-# left out — workflow methodology strings are long-form data, not code.
+# left out - workflow methodology strings are long-form data, not code.
 select = ["E4", "E7", "E9", "F", "I"]

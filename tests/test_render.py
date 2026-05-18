@@ -18,7 +18,7 @@ def test_render_includes_required_top_level_sections() -> None:
     context = _ctx()
     output = render_methodology(context, [])
 
-    assert "# Methodology — 10.10.10.5" in output
+    assert "# Methodology - 10.10.10.5" in output
     assert "## Scope & Assumptions" in output
     assert "## Detected Services" in output
     assert "## Prioritized Methodology" in output

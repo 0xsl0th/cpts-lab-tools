@@ -1,4 +1,4 @@
-"""Workspace management — lab folder layout, metadata persistence, scan discovery."""
+"""Workspace management - lab folder layout, metadata persistence, scan discovery."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ def report_scaffold(metadata: WorkspaceMetadata) -> str:
 
     lines = [
         "---",
-        f"title: {metadata.name} — Engagement Report",
+        f"title: {metadata.name} - Engagement Report",
         f"target_ip: {ip}",
         f"target_host: {host}",
         f"domain: {domain}",
@@ -104,14 +104,14 @@ def report_scaffold(metadata: WorkspaceMetadata) -> str:
         "",
         "## Scope",
         "",
-        "- Authorized lab target only — do not exceed engagement scope.",
+        "- Authorized lab target only - do not exceed engagement scope.",
         "- Source IP: `[LHOST]`",
         "- Allowed: enumeration, exploitation within scope, lab-safe credential validation.",
         "- Disallowed: out-of-scope targets, destructive actions, real-world exfiltration.",
         "",
         "## Executive Summary",
         "",
-        "_Fill after engagement completes — 2-3 sentence summary of overall impact._",
+        "_Fill after engagement completes - 2-3 sentence summary of overall impact._",
         "",
         "## Methodology",
         "",
@@ -121,14 +121,14 @@ def report_scaffold(metadata: WorkspaceMetadata) -> str:
         "",
         "## Findings",
         "",
-        "### Finding 1 — _Title_",
+        "### Finding 1 - _Title_",
         "",
         "- **Severity:** _Critical | High | Medium | Low | Info_",
-        f"- **Affected:** `{ip}` — `[SERVICE]:[PORT]`",
+        f"- **Affected:** `{ip}` - `[SERVICE]:[PORT]`",
         "- **Description:** _What is the issue?_",
         "- **Evidence:** see `screenshots/finding-1-*.png`",
         "- **Impact:** _Business or technical impact._",
-        "- **Remediation:** _Specific, actionable fix — not generic advice._",
+        "- **Remediation:** _Specific, actionable fix - not generic advice._",
         "",
         "## Evidence Index",
         "",
@@ -139,7 +139,7 @@ def report_scaffold(metadata: WorkspaceMetadata) -> str:
         "| `loot/` | Recovered files (sanitized before report) |",
         "| `notes/` | Working notes and generated methodology |",
         "| `exploits/` | Adapted exploit code with attribution |",
-        "| `creds/` | Recovered credentials — keep local, never commit |",
+        "| `creds/` | Recovered credentials - keep local, never commit |",
         "",
         "## Lessons Learned",
         "",

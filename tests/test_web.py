@@ -55,7 +55,7 @@ def test_parse_feroxbuster_text_strips_ansi_color_codes(tmp_path: Path) -> None:
 def test_parse_feroxbuster_json_keeps_only_response_entries() -> None:
     rows = parse_feroxbuster_json(FEROX_JSON)
 
-    # Fixture has 1 scan-config + 3 responses + 1 report — only the 3 responses survive.
+    # Fixture has 1 scan-config + 3 responses + 1 report - only the 3 responses survive.
     assert len(rows) == 3
     by_url = {r["url"]: r for r in rows}
     assert by_url["http://10.10.10.5/admin"]["status"] == "200"

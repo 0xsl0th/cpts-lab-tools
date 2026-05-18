@@ -7,9 +7,9 @@ from reconlab.report import check_report, format_report_check
 from reconlab.workspace import init_workspace
 
 _IMPACT_PLACEHOLDER = "_Business or technical impact._"
-_REMEDIATION_PLACEHOLDER = "_Specific, actionable fix — not generic advice._"
+_REMEDIATION_PLACEHOLDER = "_Specific, actionable fix - not generic advice._"
 _EXEC_PLACEHOLDER = (
-    "_Fill after engagement completes — 2-3 sentence summary of overall impact._"
+    "_Fill after engagement completes - 2-3 sentence summary of overall impact._"
 )
 
 
@@ -157,6 +157,6 @@ def test_format_report_check_lists_issues(tmp_path: Path) -> None:
     rendered = format_report_check(check_report(workspace))
 
     assert "Report check:" in rendered
-    assert "Finding 1 — Generic issue" in rendered
+    assert "Finding 1 - Generic issue" in rendered
     assert "Impact" in rendered
-    assert "found" in rendered  # the "N issues found — ..." summary line
+    assert "found" in rendered  # the "N issues found - ..." summary line

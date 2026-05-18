@@ -1,4 +1,4 @@
-"""Findings — structured capture into a workspace's report.md."""
+"""Findings - structured capture into a workspace's report.md."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 from .workflows import lookup as lookup_workflow
 from .workspace import WorkspaceMetadata, read_metadata
 
-_HEADING_RE = re.compile(r"^### Finding (\d+) — (.*)$")
+_HEADING_RE = re.compile(r"^### Finding (\d+) - (.*)$")
 _FINDINGS_SECTION_RE = re.compile(r"^## Findings\s*$")
 _NEXT_SECTION_RE = re.compile(r"^## ")
 _PLACEHOLDER_TITLE = "_Title_"
@@ -77,7 +77,7 @@ def _seed_description(
 def render_finding_block(finding: Finding, metadata: WorkspaceMetadata) -> list[str]:
     """Render a finding as a list of markdown lines (no trailing blank)."""
     lines: list[str] = []
-    lines.append(f"### Finding {finding.number} — {finding.title}")
+    lines.append(f"### Finding {finding.number} - {finding.title}")
     lines.append("")
     lines.append(f"- **Severity:** {finding.severity.display}")
 
@@ -86,11 +86,11 @@ def render_finding_block(finding: Finding, metadata: WorkspaceMetadata) -> list[
     if metadata.target_host:
         affected += f" (`{metadata.target_host}`)"
     if finding.service and finding.port:
-        affected += f" — `{finding.service}:{finding.port}`"
+        affected += f" - `{finding.service}:{finding.port}`"
     elif finding.service:
-        affected += f" — `{finding.service}`"
+        affected += f" - `{finding.service}`"
     elif finding.port:
-        affected += f" — port `{finding.port}`"
+        affected += f" - port `{finding.port}`"
     lines.append(f"- **Affected:** {affected}")
 
     description = _seed_description(finding.description, finding.service, metadata)
@@ -104,7 +104,7 @@ def render_finding_block(finding: Finding, metadata: WorkspaceMetadata) -> list[
         lines.append("- **Evidence:** _Capture under `screenshots/` and link here._")
 
     lines.append("- **Impact:** _Business or technical impact._")
-    lines.append("- **Remediation:** _Specific, actionable fix — not generic advice._")
+    lines.append("- **Remediation:** _Specific, actionable fix - not generic advice._")
 
     if finding.service and lookup_workflow(finding.service) is not None:
         lines.append(
@@ -155,7 +155,7 @@ def _parse_findings_in_range(
         if lines[i].startswith("- **Severity:**"):
             current.severity = lines[i].split("**Severity:**", 1)[1].strip()
         elif lines[i].startswith("- **Affected:**"):
-            tail = lines[i].split("—", 1)
+            tail = lines[i].split("-", 1)
             if len(tail) > 1:
                 current.service_port = tail[1].strip().strip("`")
     if current is not None:
@@ -203,7 +203,7 @@ def add_finding(
     section_start, section_end = _find_section_bounds(lines)
     if section_start < 0:
         raise ValueError(
-            f"{report_path} has no `## Findings` section — is it a reconlab workspace report?"
+            f"{report_path} has no `## Findings` section - is it a reconlab workspace report?"
         )
 
     existing = _parse_findings_in_range(lines, section_start, section_end)

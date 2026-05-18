@@ -169,5 +169,5 @@ def test_format_status_includes_key_lines(tmp_path: Path) -> None:
     assert "10.10.10.5 · app.corp.local · corp.local" in rendered
     assert "1 file (latest: tcp.xml)" in rendered
     assert "STALE" in rendered
-    assert "1 recorded — 1 High" in rendered
+    assert "1 recorded - 1 High" in rendered
     assert "Next:" in rendered

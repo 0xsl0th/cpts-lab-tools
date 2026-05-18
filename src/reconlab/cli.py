@@ -58,7 +58,7 @@ finding_app = typer.Typer(
     help="Record and list engagement findings inside a workspace's report.md."
 )
 workflow_app = typer.Typer(
-    help="Inspect the service workflow registry — list available workflows and "
+    help="Inspect the service workflow registry - list available workflows and "
     "print one to stdout without needing a workspace or a scan."
 )
 app.add_typer(workspace_app, name="workspace")
@@ -174,7 +174,7 @@ def _render_suggest_from_services(
     target_ip = target or (services[0]["host"] if services else None)
     if not target_ip or target_ip == "-":
         raise typer.BadParameter(
-            "Could not determine target IP from the scan — pass --target/-t explicitly."
+            "Could not determine target IP from the scan - pass --target/-t explicitly."
         )
 
     detected: list[dict[str, str]] = []
@@ -397,7 +397,7 @@ def make_hosts(
         ),
     ] = None,
 ) -> None:
-    """Suggest an /etc/hosts entry — workspace-aware by default, with a manual fallback.
+    """Suggest an /etc/hosts entry - workspace-aware by default, with a manual fallback.
 
     Does not modify any file.
     """
@@ -477,7 +477,7 @@ def _emit_workspace_hosts(
     if not aggregated:
         typer.echo("# No hostname candidates found in metadata or scans/.")
         typer.echo("")
-        typer.echo("# Add this to /etc/hosts (IP only — add hostnames manually):")
+        typer.echo("# Add this to /etc/hosts (IP only - add hostnames manually):")
         typer.echo(resolved_ip)
         return
 
@@ -916,7 +916,7 @@ def finding_add(
         raise typer.BadParameter(str(exc)) from exc
 
     typer.echo(
-        f"Recorded Finding {number} — {title} ({severity.display}) "
+        f"Recorded Finding {number} - {title} ({severity.display}) "
         f"in {workspace / 'report.md'}"
     )
 
@@ -1020,7 +1020,7 @@ def workflow_show(
         ),
     ] = None,
 ) -> None:
-    """Print one service workflow as Markdown — no workspace or scan required."""
+    """Print one service workflow as Markdown - no workspace or scan required."""
     workflow = lookup_workflow(service)
     if workflow is None:
         known = ", ".join(sorted(all_workflow_ids()))

@@ -151,7 +151,7 @@ def test_index_has_methodology_moc_tags() -> None:
     vault = render_obsidian_vault(_ctx(), resolve(["smb"]))
     index = vault["index.md"]
 
-    assert "title: Methodology — 10.10.10.5" in index
+    assert "title: Methodology - 10.10.10.5" in index
     assert "- methodology" in index
     assert "- moc" in index
 

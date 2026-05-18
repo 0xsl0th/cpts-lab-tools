@@ -1,8 +1,8 @@
-"""Workspace status — summarize a workspace's progress and the next step to take.
+"""Workspace status - summarize a workspace's progress and the next step to take.
 
 Lives in its own module (rather than in `workspace.py`) because it needs both
 `workspace` primitives and `findings` parsing, and `findings` already imports
-from `workspace` — keeping it here avoids a circular import.
+from `workspace` - keeping it here avoids a circular import.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def _methodology_path(workspace: Path) -> Path | None:
 
 
 def _methodology_mtime(methodology: Path) -> float:
-    """mtime of the methodology — index.md for a vault, the file itself for md mode."""
+    """mtime of the methodology - index.md for a vault, the file itself for md mode."""
     if methodology.is_dir():
         return methodology.joinpath("index.md").stat().st_mtime
     return methodology.stat().st_mtime
@@ -73,7 +73,7 @@ def _next_step(
         return "Run `reconlab workspace suggest` to generate methodology from scans/."
     if methodology_stale:
         return (
-            "scans/ changed since the methodology was generated — re-run "
+            "scans/ changed since the methodology was generated - re-run "
             "`reconlab workspace suggest --force`."
         )
     if not findings:
@@ -115,7 +115,7 @@ def gather_status(path: Path) -> WorkspaceStatus:
     try:
         findings = real_findings(list_findings(path))
     except FileNotFoundError:
-        # Metadata exists but report.md was removed — treat as no findings.
+        # Metadata exists but report.md was removed - treat as no findings.
         findings = []
 
     web_files = find_all_web_files(path / "web")
@@ -124,7 +124,7 @@ def gather_status(path: Path) -> WorkspaceStatus:
         try:
             rows = parse_web_results(web_file, WebFormat.AUTO)
         except (ValueError, OSError):
-            continue  # unparseable file — skip silently for status
+            continue  # unparseable file - skip silently for status
         if rows:
             parsed_web.append((web_file, rows))
     web_findings = merge_web_results(parsed_web) if parsed_web else []
@@ -182,7 +182,7 @@ def format_status(status: WorkspaceStatus) -> str:
         rel = status.methodology.relative_to(status.path)
         shown = f"{rel}/" if status.methodology.is_dir() else str(rel)
         if status.methodology_stale:
-            shown += "  — STALE (newer scans present)"
+            shown += "  - STALE (newer scans present)"
         lines.append(row("Methodology", shown))
 
     if status.web_file_count == 0:
@@ -205,7 +205,7 @@ def format_status(status: WorkspaceStatus) -> str:
             f"{count} {sev}" for sev, count in severity_counts(status.findings)
         )
         lines.append(
-            row("Findings", f"{len(status.findings)} recorded — {breakdown}")
+            row("Findings", f"{len(status.findings)} recorded - {breakdown}")
         )
 
     lines.extend(["", f"Next: {status.next_step}"])

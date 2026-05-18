@@ -1,4 +1,4 @@
-"""Report completeness check — flag a workspace report.md that isn't wrap-up ready.
+"""Report completeness check - flag a workspace report.md that isn't wrap-up ready.
 
 `workspace check` parses report.md and reports the scaffold placeholders the
 operator still needs to fill in: per-finding fields (Severity, Description,
@@ -100,7 +100,7 @@ def _exec_summary_unfilled(lines: list[str]) -> bool:
                 return True  # section is empty
             return bool(_ITALIC_PLACEHOLDER_RE.match(stripped))
         return True  # heading is the last line in the file
-    return False  # no Executive Summary section — nothing to flag
+    return False  # no Executive Summary section - nothing to flag
 
 
 def check_report(workspace_path: Path) -> ReportCheck:
@@ -135,7 +135,7 @@ def check_report(workspace_path: Path) -> ReportCheck:
     report_issues: list[str] = []
     if not real:
         report_issues.append(
-            "No findings recorded — the Findings section still has only the "
+            "No findings recorded - the Findings section still has only the "
             "scaffold placeholder."
         )
     if _exec_summary_unfilled(lines):
@@ -156,7 +156,7 @@ def format_report_check(check: ReportCheck) -> str:
     if check.ok:
         plural = "finding" if check.finding_count == 1 else "findings"
         lines.append(
-            f"  OK — {check.finding_count} {plural}, no issues. "
+            f"  OK - {check.finding_count} {plural}, no issues. "
             "Report looks wrap-up ready."
         )
         return "\n".join(lines)
@@ -169,13 +169,13 @@ def format_report_check(check: ReportCheck) -> str:
     if check.finding_issues:
         lines.append("Findings:")
         for fi in check.finding_issues:
-            lines.append(f"  Finding {fi.number} — {fi.title}")
+            lines.append(f"  Finding {fi.number} - {fi.title}")
             lines.extend(f"    - {problem}" for problem in fi.problems)
         lines.append("")
 
     count = check.issue_count
     plural = "issue" if count == 1 else "issues"
     lines.append(
-        f"{count} {plural} found — fill these in before handing the report over."
+        f"{count} {plural} found - fill these in before handing the report over."
     )
     return "\n".join(lines)

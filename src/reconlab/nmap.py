@@ -1,4 +1,4 @@
-"""Nmap scan parsing — XML, normal (.nmap), and grepable (.gnmap)."""
+"""Nmap scan parsing - XML, normal (.nmap), and grepable (.gnmap)."""
 
 import re
 from dataclasses import dataclass
@@ -159,7 +159,7 @@ def merge_scan_results(
 
     Records are keyed by `(host, port, proto)`. When the same key appears in
     multiple scans, fields are taken from the most recent non-placeholder
-    value — so a later targeted `-sV` scan's product/version wins over an
+    value - so a later targeted `-sV` scan's product/version wins over an
     earlier banner-only scan, but a placeholder in the newer scan does not
     erase real data captured earlier.
 

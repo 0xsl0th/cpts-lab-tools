@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`make-hosts` is now workspace-aware.** Run with no IP/hostname args (or
   pointed at a workspace path) and it pulls hostname candidates from
-  `.reconlab.json` and every nmap XML scan in `scans/` — extracting reverse
+  `.reconlab.json` and every nmap XML scan in `scans/` - extracting reverse
   DNS, `ssl-cert` Subject CN and SAN DNS entries, `http-title` redirects, and
   `smb-os-discovery` FQDN. Candidates are deduplicated case-insensitively with
   merged sources shown so you can see why each hostname was suggested. The
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`workspace ingest-web`** — closes the asymmetry where the workspace only
+- **`workspace ingest-web`** - closes the asymmetry where the workspace only
   ingested nmap. A new `web/` folder is created on `workspace init`; drop
   feroxbuster (text or `--json`) and gobuster output files there, and
   `workspace ingest-web` merges every file into one deduplicated table
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- **`report-init` and `obsidian-note` commands** — both were deprecated in 0.4.0
+- **`report-init` and `obsidian-note` commands** - both were deprecated in 0.4.0
   with a removal promise. Migrate to `workspace init` (replaces `report-init`)
   and `workspace init` + `workspace suggest` (replaces `obsidian-note`). The
   internal `_warn_deprecated` helper goes away with them since no callers
@@ -46,14 +46,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Five new service-enum workflows** — Oracle TNS (1521), IMAP/POP3 (110/143/
+- **Five new service-enum workflows** - Oracle TNS (1521), IMAP/POP3 (110/143/
   993/995), rsync (873), Redis (6379), and VNC (5900). Each provides the full
-  workflow shape — checklist, commands, expected output, verification,
-  troubleshooting, report note — with lab-safe placeholders. Three are grounded
+  workflow shape - checklist, commands, expected output, verification,
+  troubleshooting, report note - with lab-safe placeholders. Three are grounded
   in the field-manual reference (Oracle, IMAP/POP3, rsync); two cover common
   pentest methodology (Redis, VNC). The registry now covers 20 service-enum
   workflows.
-- **`parse-web` command** — ingests feroxbuster (text or `--json`) and
+- **`parse-web` command** - ingests feroxbuster (text or `--json`) and
   gobuster text output and prints a clean Status/Method/Size/URL table,
   parallel to `parse-nmap`. Auto-detects the format, strips ANSI colors,
   inlines redirect targets into the URL column, and supports `--status`
@@ -63,11 +63,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Report check** — `workspace check` lints a workspace's `report.md` for
+- **Report check** - `workspace check` lints a workspace's `report.md` for
   wrap-up readiness, flagging unfilled scaffold placeholders in findings
   (Severity, Description, Evidence, Impact, Remediation) and the Executive
   Summary. Exits non-zero when issues remain, so it can gate a handover or CI.
-- **PyPI distribution** — the project is now packaged for PyPI with full
+- **PyPI distribution** - the project is now packaged for PyPI with full
   metadata (license, classifiers, URLs) and a trusted-publishing GitHub
   Actions workflow that auto-publishes on each GitHub release. Install via
   `pipx install reconlab` or `pip install reconlab`. MIT licensed.
@@ -84,13 +84,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Workspace status** — `workspace status` summarizes a workspace at a glance:
+- **Workspace status** - `workspace status` summarizes a workspace at a glance:
   scan count and latest scan, whether methodology has been generated and whether
   it is stale relative to `scans/`, recorded findings by severity, and a single
-  state-driven "next step" hint. Read-only — it never modifies the workspace.
-- **Version flag** — `reconlab --version` prints the installed version and
+  state-driven "next step" hint. Read-only - it never modifies the workspace.
+- **Version flag** - `reconlab --version` prints the installed version and
   exits.
-- **JSON output** — `suggest-next` and `workspace suggest` accept
+- **JSON output** - `suggest-next` and `workspace suggest` accept
   `--output-format json`, emitting a structured JSON document (target metadata,
   detected/unmapped services, and the full per-workflow methodology) for
   scripting. `workspace suggest --output-format json` writes
@@ -106,25 +106,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Workspace lifecycle** — `workspace init` scaffolds a target folder with
+- **Workspace lifecycle** - `workspace init` scaffolds a target folder with
   persisted metadata and a report scaffold; `workspace suggest` generates
   methodology directly from a workspace's `scans/` folder.
-- **Multi-format Nmap parsing** — accepts XML, normal (`.nmap`), and grepable
+- **Multi-format Nmap parsing** - accepts XML, normal (`.nmap`), and grepable
   (`.gnmap`) output, with auto-detection from the file extension or `-oA`
   basename.
-- **Multi-scan merge** — `workspace suggest` unions open ports across every
+- **Multi-scan merge** - `workspace suggest` unions open ports across every
   scan in `scans/` by default, keyed by `(host, port, proto)`, with the most
   recent non-placeholder service data winning; `--latest` restores single-scan
   mode.
-- **Methodology output** — render methodology as a single Markdown file or as
+- **Methodology output** - render methodology as a single Markdown file or as
   an Obsidian-friendly vault (MOC index plus one cross-linked note per service).
-- **Workflow registry** — inspectable via `workflow list` / `workflow show`,
+- **Workflow registry** - inspectable via `workflow list` / `workflow show`,
   organized into `service-enum`, `post-foothold`, and `lateral-movement`
   categories; 15 service workflows plus `linux-privesc`, `windows-privesc`,
   `ad-foothold`, and `pivoting`.
-- **Findings capture** — `finding add` / `finding list` record structured,
+- **Findings capture** - `finding add` / `finding list` record structured,
   severity-tagged findings into a workspace's `report.md`.
-- **CI and linting** — GitHub Actions runs `ruff check` and `pytest` on every
+- **CI and linting** - GitHub Actions runs `ruff check` and `pytest` on every
   push and pull request across Python 3.11 and 3.13; Ruff added as a dev
   dependency with a basic rule set.
 

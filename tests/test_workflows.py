@@ -112,7 +112,7 @@ def test_post_foothold_workflows_are_not_canonical_services() -> None:
 
 
 def test_post_foothold_workflows_use_lab_safe_placeholders() -> None:
-    # No real IPs/hosts baked in — only the agreed placeholder tokens.
+    # No real IPs/hosts baked in - only the agreed placeholder tokens.
     for sid in ("linux-privesc", "windows-privesc", "ad-foothold", "pivoting"):
         workflow = lookup(sid)
         assert workflow is not None

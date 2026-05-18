@@ -27,13 +27,13 @@ python -m pip install -e ".[dev]"
 | Command | What it does |
 |---------|--------------|
 | `workspace init` | Scaffold a target folder, metadata file, and a richer report scaffold. |
-| `workspace suggest` | Generate methodology from `scans/` — merges every scan file by default. |
-| `workspace status` | Summarize a workspace — scans, methodology freshness, findings, web findings, and the next step. |
+| `workspace suggest` | Generate methodology from `scans/` - merges every scan file by default. |
+| `workspace status` | Summarize a workspace - scans, methodology freshness, findings, web findings, and the next step. |
 | `workspace ingest-web` | Merge every feroxbuster / gobuster output in a workspace's `web/` folder into one table. |
-| `workspace check` | Lint `report.md` for wrap-up readiness — unfilled findings and sections. Exits non-zero on issues. |
+| `workspace check` | Lint `report.md` for wrap-up readiness - unfilled findings and sections. Exits non-zero on issues. |
 | `finding add` / `finding list` | Capture findings into `report.md`; print the current findings table. |
-| `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry — no scan or workspace needed. |
-| `make-hosts` | Suggest an `/etc/hosts` entry — workspace-aware (pulls hostnames from scan output and metadata) with a manual no-workspace fallback. Read-only. |
+| `workflow show` / `workflow list` | Print one workflow as Markdown / list the workflow registry - no scan or workspace needed. |
+| `make-hosts` | Suggest an `/etc/hosts` entry - workspace-aware (pulls hostnames from scan output and metadata) with a manual no-workspace fallback. Read-only. |
 | `parse-nmap` | Tabular summary of open services from an nmap XML scan. |
 | `parse-web` | Tabular summary of feroxbuster / gobuster output (text or JSON). |
 | `suggest-next` | Methodology generator over an explicit scan file (underlies `workspace suggest`). |
@@ -57,7 +57,7 @@ reconlab workspace init target \
 cd target
 
 # 2. (Optional) Print the /etc/hosts entry and a copy-paste shell command.
-#    Does NOT modify /etc/hosts — you run the printed command yourself.
+#    Does NOT modify /etc/hosts - you run the printed command yourself.
 #    Reads target IP/host from .reconlab.json; re-run after nmap to also pick
 #    up hostnames from ssl-cert SANs, http-title redirects, and SMB FQDN.
 reconlab make-hosts
@@ -67,7 +67,7 @@ sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
 
 # 4. Generate prioritized, service-by-service methodology as an Obsidian vault.
 #    Metadata from the workspace (target IP / host / domain) is filled in
-#    automatically — no need to repeat the flags.
+#    automatically - no need to repeat the flags.
 reconlab workspace suggest
 
 # 5. Open notes/methodology/index.md in Obsidian (or any Markdown editor).
@@ -97,7 +97,7 @@ target/
 ├── loot/               # recovered files (sanitized before report)
 ├── notes/              # working notes + generated methodology vault
 ├── exploits/           # adapted exploit code with attribution
-└── creds/              # recovered credentials — gitignored
+└── creds/              # recovered credentials - gitignored
 ```
 
 After `workspace suggest`, `notes/methodology/` contains an Obsidian-friendly
@@ -221,7 +221,7 @@ reconlab make-hosts \
 ```
 
 In the flag form, the first value after `--aliases` is consumed by the flag and
-any further positional arguments are appended as additional aliases — so the
+any further positional arguments are appended as additional aliases - so the
 shell-natural `--aliases a b c` syntax works. Repeating the flag
 (`--aliases a --aliases b`) is also supported. Hostname casing is preserved
 exactly as typed. Whether workspace mode or manual form runs is decided by the
@@ -262,7 +262,7 @@ Multi-scan behavior:
   union open ports across them and merge service metadata.
 - Records are keyed by `(host, port, proto)`. When the same port appears in
   more than one scan, the **most recent non-placeholder value wins** for
-  service name, product, and version — so a later `-sV` overrides an earlier
+  service name, product, and version - so a later `-sV` overrides an earlier
   banner-only scan, but an unscanned re-discovery cannot erase real data
   captured earlier.
 - Pass `--latest` to revert to single-scan mode (most-recently-modified file
@@ -273,7 +273,7 @@ passed; unrelated files in the workspace are never touched.
 
 ### Check workspace status
 
-`workspace status` prints a one-screen summary of where a workspace stands —
+`workspace status` prints a one-screen summary of where a workspace stands -
 scan count, whether methodology has been generated (and whether it is stale
 relative to `scans/`), recorded findings by severity, and a single suggested
 next step.
@@ -291,22 +291,22 @@ Path:      /home/op/labs/target
   Target       10.10.10.5 · app.corp.local · corp.local
   Platform     lab
   Scans        1 file (latest: initial.xml)
-  Methodology  notes/methodology/  — STALE (newer scans present)
-  Findings     1 recorded — 1 High
+  Methodology  notes/methodology/  - STALE (newer scans present)
+  Findings     1 recorded - 1 High
 
-Next: scans/ changed since the methodology was generated — re-run `reconlab workspace suggest --force`.
+Next: scans/ changed since the methodology was generated - re-run `reconlab workspace suggest --force`.
 ```
 
 The **Next** line is state-driven: it points at `workspace suggest` when no
 methodology exists yet, flags a stale methodology once newer scans land, and
 nudges toward `finding add` after methodology is in place. It never modifies
-the workspace — `workspace status` is read-only.
+the workspace - `workspace status` is read-only.
 
 ### Ingest web content-discovery output
 
 `workspace init` now creates a `web/` folder alongside `scans/`. Drop
 feroxbuster (text or `--json`) or gobuster output there, and
-`workspace ingest-web` merges every file into one deduplicated table —
+`workspace ingest-web` merges every file into one deduplicated table -
 parallel to how `workspace suggest` merges every nmap scan in `scans/`.
 
 ```bash
@@ -331,7 +331,7 @@ web outputs are present.
 ### Check report readiness
 
 `workspace check` lints the workspace's `report.md` and flags the scaffold
-placeholders still left unfilled — per-finding fields (Severity, Description,
+placeholders still left unfilled - per-finding fields (Severity, Description,
 Evidence, Impact, Remediation) and the Executive Summary. It exits non-zero
 when issues remain, so it works as a pre-handover gate or a CI step.
 
@@ -348,22 +348,22 @@ Report:
   - Executive Summary is still the scaffold placeholder.
 
 Findings:
-  Finding 1 — SMB null session enabled
+  Finding 1 - SMB null session enabled
     - **Impact** is still a scaffold placeholder
     - **Remediation** is still a scaffold placeholder
 
-3 issues found — fill these in before handing the report over.
+3 issues found - fill these in before handing the report over.
 ```
 
 `finding add` fills in Severity, Affected, and (with `--service`) Description,
-but Impact and Remediation are always left for you — `workspace check` is the
+but Impact and Remediation are always left for you - `workspace check` is the
 reminder that they, and the Executive Summary, still need attention. Like
 `workspace status`, it is read-only.
 
 ### Record findings into the report
 
 `finding add` appends a structured finding block to `report.md` inside the
-workspace. The first call replaces the placeholder `### Finding 1 — _Title_`
+workspace. The first call replaces the placeholder `### Finding 1 - _Title_`
 left there by `workspace init`; subsequent calls auto-increment the finding
 number after the highest existing one.
 
@@ -390,7 +390,7 @@ What `finding add` does:
   multiple files (`--evidence a.png --evidence b.png`).
 - Severity is restricted to `critical | high | medium | low | info`.
 
-`finding list` prints the current findings as a one-line-per-finding table —
+`finding list` prints the current findings as a one-line-per-finding table -
 handy for sanity-checking what is captured so far without opening the file:
 
 ```text
@@ -402,21 +402,21 @@ handy for sanity-checking what is captured so far without opening the file:
 
 ### Browse the workflow registry
 
-`workflow list` and `workflow show` expose the workflow registry directly —
+`workflow list` and `workflow show` expose the workflow registry directly -
 useful for "remind me what to check for LDAP" or for picking a starting point
 on a target you haven't scanned yet. Neither command needs a workspace or a
 scan file.
 
 Workflows fall into three categories:
 
-- **`service-enum`** — per-service enumeration methodology (SMB, HTTP, LDAP, …).
+- **`service-enum`** - per-service enumeration methodology (SMB, HTTP, LDAP, …).
   These are what `suggest-next` / `workspace suggest` auto-select from a scan.
-- **`post-foothold`** — what to do once you have a shell or a valid credential:
+- **`post-foothold`** - what to do once you have a shell or a valid credential:
   `linux-privesc`, `windows-privesc`, `ad-foothold`.
-- **`lateral-movement`** — `pivoting`: tunneling and internal network access.
+- **`lateral-movement`** - `pivoting`: tunneling and internal network access.
 
 Post-foothold and lateral-movement workflows have no ports, so a scan never
-auto-selects them — reach them with `workflow show`.
+auto-selects them - reach them with `workflow show`.
 
 ```bash
 reconlab workflow list
@@ -452,7 +452,7 @@ so the generated methodology carries you past initial access.
 
 `suggest-next` is the underlying methodology generator. For the typical case
 (one workspace, drop a scan into `scans/`, get a vault back) prefer
-`reconlab workspace suggest` — it picks up the latest scan and the workspace
+`reconlab workspace suggest` - it picks up the latest scan and the workspace
 metadata automatically. Reach for `suggest-next` directly when you want to
 point at an arbitrary scan file or override the target metadata.
 
@@ -463,10 +463,10 @@ verification steps, troubleshooting matrix, and a draft report note. Lab placeho
 
 Supported input formats:
 
-- `xml` — nmap XML (`-oX` or `-oA`); the most reliable parser.
-- `normal` — human-readable nmap output (`.nmap` files from `-oN` or `-oA`).
-- `grepable` — grepable nmap output (`.gnmap` files from `-oG` or `-oA`).
-- `auto` (default) — infers from the file extension; if the path has no extension,
+- `xml` - nmap XML (`-oX` or `-oA`); the most reliable parser.
+- `normal` - human-readable nmap output (`.nmap` files from `-oN` or `-oA`).
+- `grepable` - grepable nmap output (`.gnmap` files from `-oG` or `-oA`).
+- `auto` (default) - infers from the file extension; if the path has no extension,
   it is treated as an `nmap -oA` basename and the matching sibling file is probed
   in `xml → normal → grepable` priority.
 
@@ -497,7 +497,7 @@ reconlab suggest-next -i scans/target.xml
 Excerpt of the default `md` output:
 
 ```markdown
-# Methodology — 10.10.10.5
+# Methodology - 10.10.10.5
 
 ## Detected Services
 
@@ -506,7 +506,7 @@ Excerpt of the default `md` output:
 | 445  | tcp   | microsoft-ds | Samba | 4.15.0 |
 | 3389 | tcp   | ms-wbt-server | - | - |
 
-## SMB (139/445) — Share & RPC Enumeration
+## SMB (139/445) - Share & RPC Enumeration
 
 ### Checklist
 - [ ] Fingerprint SMB dialect and signing posture.
@@ -517,8 +517,8 @@ Excerpt of the default `md` output:
 Supported service-enum workflows in this release: SMB, HTTP, HTTPS, FTP, SSH,
 DNS, SMTP, LDAP, Kerberos, MSSQL, MySQL, Oracle, RDP, WinRM, SNMP, NFS, rsync,
 Redis, VNC, IMAP/POP3 (20 total), plus
-three post-foothold workflows — `linux-privesc`, `windows-privesc`,
-`ad-foothold` — and one lateral-movement workflow, `pivoting`. Run
+three post-foothold workflows - `linux-privesc`, `windows-privesc`,
+`ad-foothold` - and one lateral-movement workflow, `pivoting`. Run
 `reconlab workflow list` for the live registry with
 categories, priorities, and port mappings. Open ports without a service-enum
 workflow are listed under an **Unmapped Services** section so nothing is
@@ -556,7 +556,7 @@ notes/target/
 
 - Filenames use the lowercase canonical service ID (`smb.md`, `winrm.md`).
 - Cross-references render as aliased wikilinks: `[[services/smb|SMB]]`,
-  `[[services/winrm|WinRM]]` — paths are stable and machine-friendly, while the
+  `[[services/winrm|WinRM]]` - paths are stable and machine-friendly, while the
   alias keeps the rendered text human-friendly.
 - Each note carries YAML frontmatter (`title`, `target`, `service`, `priority`,
   `status: in-progress`, tags) so Obsidian dataview / search queries work

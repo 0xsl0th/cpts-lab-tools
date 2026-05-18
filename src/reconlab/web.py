@@ -139,7 +139,7 @@ def detect_format(path: Path) -> WebFormat:
     text = path.read_text(encoding="utf-8", errors="replace")
     nonblank = [_strip_ansi(line) for line in text.splitlines() if line.strip()]
     if not nonblank:
-        return WebFormat.FEROXBUSTER  # empty file — any parser will yield []
+        return WebFormat.FEROXBUSTER  # empty file - any parser will yield []
 
     first = nonblank[0].strip()
     if first.startswith("{"):
@@ -223,7 +223,7 @@ def merge_web_results(
 ) -> list[dict[str, str]]:
     """Dedupe rows across multiple parsed files, keyed by (method, status, url).
 
-    The input is `(source_file, parsed_rows)` ordered oldest-first by mtime —
+    The input is `(source_file, parsed_rows)` ordered oldest-first by mtime -
     matching the contract of `find_all_web_files`. When the same URL+method+
     status appears in more than one file, the most recent non-placeholder
     `size` / `words` / `lines` / `redirect` win, so a later targeted scan can

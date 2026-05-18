@@ -144,7 +144,7 @@ def test_parse_nmap_grepable_extracts_service_and_version() -> None:
 def test_parse_nmap_grepable_skips_status_only_lines() -> None:
     services = parse_nmap_grepable(GREPABLE_FIXTURE)
     # The fixture has one "Status: Up" host line preceding the Ports line;
-    # both lines share the same host IP — we must only emit ports once.
+    # both lines share the same host IP - we must only emit ports once.
     assert len(services) == len(EXPECTED_OPEN_PORTS)
 
 

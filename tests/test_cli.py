@@ -13,7 +13,7 @@ runner = CliRunner()
 # Typer force-enables Rich colored output in some environments (notably when
 # GITHUB_ACTIONS is set), which injects ANSI escape codes into CLI error
 # messages. Strip them so error-string assertions match the plain text
-# regardless of how Typer chose to render — keeping tests stable locally and
+# regardless of how Typer chose to render - keeping tests stable locally and
 # in CI.
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
@@ -270,7 +270,7 @@ def test_suggest_next_prints_methodology_to_stdout() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "# Methodology — 10.10.10.5" in result.output
+    assert "# Methodology - 10.10.10.5" in result.output
     assert "## Detected Services" in result.output
     assert "SMB (139/445)" in result.output
     assert "RDP (3389)" in result.output
@@ -299,7 +299,7 @@ def test_suggest_next_writes_to_output_file(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert out_path.is_file()
     content = out_path.read_text(encoding="utf-8")
-    assert "# Methodology — 10.10.10.5" in content
+    assert "# Methodology - 10.10.10.5" in content
     assert f"Wrote methodology to {out_path}" in result.output
 
 
@@ -342,7 +342,7 @@ def test_suggest_next_defaults_target_ip_from_scan() -> None:
     result = runner.invoke(app, ["suggest-next", "-i", str(FIXTURE_XML)])
 
     assert result.exit_code == 0, result.output
-    assert "# Methodology — 10.10.10.5" in result.output
+    assert "# Methodology - 10.10.10.5" in result.output
 
 
 def test_suggest_next_parses_normal_format() -> None:
@@ -358,7 +358,7 @@ def test_suggest_next_parses_normal_format() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "# Methodology — 10.10.10.5" in result.output
+    assert "# Methodology - 10.10.10.5" in result.output
     assert "SMB (139/445)" in result.output
     assert "SSH (22)" in result.output
 
@@ -376,7 +376,7 @@ def test_suggest_next_parses_grepable_format() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "# Methodology — 10.10.10.5" in result.output
+    assert "# Methodology - 10.10.10.5" in result.output
     assert "RDP (3389)" in result.output
 
 
@@ -386,7 +386,7 @@ def test_suggest_next_auto_infers_xml_from_suffix() -> None:
         ["suggest-next", "-i", str(FIXTURE_XML), "--input-format", "auto"],
     )
     assert result.exit_code == 0, result.output
-    assert "# Methodology — 10.10.10.5" in result.output
+    assert "# Methodology - 10.10.10.5" in result.output
 
 
 def test_suggest_next_auto_infers_normal_from_suffix() -> None:
@@ -417,7 +417,7 @@ def test_suggest_next_auto_probes_oa_basename_with_xml_priority(tmp_path: Path) 
         ["suggest-next", "-i", str(tmp_path / "scan")],
     )
     assert result.exit_code == 0, result.output
-    assert "# Methodology — 10.10.10.5" in result.output
+    assert "# Methodology - 10.10.10.5" in result.output
 
 
 def test_suggest_next_auto_falls_back_to_normal_when_only_nmap_exists(
@@ -703,7 +703,7 @@ def test_workspace_suggest_md_mode_writes_single_file(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     single = workspace / "notes" / "methodology.md"
     assert single.is_file()
-    assert "# Methodology — 10.10.10.5" in single.read_text(encoding="utf-8")
+    assert "# Methodology - 10.10.10.5" in single.read_text(encoding="utf-8")
 
 
 def test_workspace_suggest_json_mode_writes_methodology_json(tmp_path: Path) -> None:
@@ -866,11 +866,11 @@ def test_workspace_check_passes_complete_report(tmp_path: Path) -> None:
         report.read_text(encoding="utf-8")
         .replace("_Business or technical impact._", "Anonymous share read.")
         .replace(
-            "_Specific, actionable fix — not generic advice._",
+            "_Specific, actionable fix - not generic advice._",
             "Require SMB signing.",
         )
         .replace(
-            "_Fill after engagement completes — 2-3 sentence summary of "
+            "_Fill after engagement completes - 2-3 sentence summary of "
             "overall impact._",
             "Compromised via SMB.",
         )
@@ -927,7 +927,7 @@ def test_finding_add_records_in_report(tmp_path: Path) -> None:
     assert result.exit_code == 0, result.output
     assert "Recorded Finding 1" in result.output
     report = (workspace / "report.md").read_text(encoding="utf-8")
-    assert "### Finding 1 — SMB null session enabled" in report
+    assert "### Finding 1 - SMB null session enabled" in report
     assert "**Severity:** High" in report
     assert "`screenshots/shares.png`" in report
     assert "[[notes/methodology/services/smb]]" in report
@@ -1079,7 +1079,7 @@ def test_workflow_show_prints_full_workflow() -> None:
     result = runner.invoke(app, ["workflow", "show", "smb"])
 
     assert result.exit_code == 0, result.output
-    assert "SMB (139/445) — Share & RPC Enumeration" in result.output
+    assert "SMB (139/445) - Share & RPC Enumeration" in result.output
     assert "### Checklist" in result.output
     assert "### Commands" in result.output
     assert "### Troubleshooting" in result.output
