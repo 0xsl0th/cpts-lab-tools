@@ -51,15 +51,15 @@ real values your lab gives you.
 #    /etc/hosts line built from --ip / --host / --domain - paste the echo
 #    command it shows to map the hostname locally. Does NOT touch any file.
 reconlab workspace init target \
-  --ip 10.10.10.5 \
-  --host app.corp.local \
-  --domain corp.local \
+  --ip <ip> \
+  --host <host> \
+  --domain <domain> \
   --platform lab
 
 cd target
 
 # 2. Run nmap into the workspace's scans/ folder.
-sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
+sudo nmap -sV -sC -p- -oA scans/initial <ip>
 
 # 3. (Optional) Re-run make-hosts to pick up hostnames discovered by the scan:
 #    ssl-cert SANs, http-title redirects, SMB FQDN. Skip if no new hostnames.
