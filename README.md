@@ -198,7 +198,7 @@ script results:
 echo "10.10.10.5 app.corp.local intranet.corp.local dev.app.corp.local" | sudo tee -a /etc/hosts
 ```
 
-If `.reconlab.json` has no `target_ip` set, pass `--target-ip 10.10.10.5` to
+If `.reconlab.json` has no `target_ip` set, pass `--target-ip <ip>` to
 override for this run. If no hostname candidates are found, the IP line is
 still printed so you can add hostnames manually.
 
