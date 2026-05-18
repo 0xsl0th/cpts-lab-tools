@@ -5,6 +5,20 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`--output-format json` for `workflow list`.** Closes the JSON-output
+  story (parsers + `finding list` + `workspace suggest` already had it).
+  Emits a list of workflow dicts (`id`, `category`, `display_name`,
+  `priority`, `ports`) sorted exactly as the table is, for piping to `jq`.
+- **`--no-header` flag for `parse-nmap`, `parse-web`, `finding list`,
+  and `workflow list`.** Suppresses the header row and separator in table
+  mode so the output is pure data rows - friendlier for piping to `awk`,
+  `cut`, `grep`, or `sort`. The flag is table-mode-only; `--output-format
+  json` ignores it.
+
 ## [0.14.0] - 2026-05-18
 
 ### Added

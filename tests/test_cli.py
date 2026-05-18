@@ -1380,6 +1380,65 @@ def test_workflow_list_includes_known_services() -> None:
     assert "Priority" in result.output
 
 
+def test_workflow_list_json_output_emits_list_of_workflow_dicts() -> None:
+    result = runner.invoke(app, ["workflow", "list", "--output-format", "json"])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert isinstance(data, list)
+    assert data
+    by_id = {w["id"]: w for w in data}
+    assert "smb" in by_id
+    smb = by_id["smb"]
+    assert smb["category"] == "service-enum"
+    assert smb["display_name"] == "SMB"
+    assert isinstance(smb["priority"], int)
+    assert "139/tcp" in smb["ports"]
+    assert "445/tcp" in smb["ports"]
+
+
+def test_workflow_list_no_header_strips_header_and_separator() -> None:
+    full = runner.invoke(app, ["workflow", "list"])
+    bare = runner.invoke(app, ["workflow", "list", "--no-header"])
+
+    assert full.exit_code == bare.exit_code == 0
+    assert "Priority" in full.output
+    assert "Priority" not in bare.output
+    # First data row appears in both, but bare starts with it.
+    assert bare.output.lstrip().startswith("service-enum")
+
+
+def test_parse_nmap_no_header_strips_header_and_separator(tmp_path: Path) -> None:
+    full = runner.invoke(app, ["parse-nmap", str(FIXTURE_XML)])
+    bare = runner.invoke(app, ["parse-nmap", str(FIXTURE_XML), "--no-header"])
+
+    assert full.exit_code == bare.exit_code == 0
+    assert "Host" in full.output and "Names" in full.output
+    assert "Host  Names" not in bare.output
+    # The 10.10.10.5 fixture host is present in both.
+    assert "10.10.10.5" in bare.output
+
+
+def test_parse_web_no_header_strips_header_and_separator() -> None:
+    full = runner.invoke(app, ["parse-web", str(FIXTURE_GOBUSTER)])
+    bare = runner.invoke(app, ["parse-web", str(FIXTURE_GOBUSTER), "--no-header"])
+
+    assert full.exit_code == bare.exit_code == 0
+    assert "Status" in full.output
+    assert "Status" not in bare.output
+
+
+def test_finding_list_no_header_strips_header_and_separator(tmp_path: Path) -> None:
+    workspace = _seed_findings_workspace(tmp_path)
+    full = runner.invoke(app, ["finding", "list", str(workspace)])
+    bare = runner.invoke(app, ["finding", "list", str(workspace), "--no-header"])
+
+    assert full.exit_code == bare.exit_code == 0
+    assert "Severity" in full.output
+    assert "Severity" not in bare.output
+    assert "SMB null session" in bare.output
+
+
 def test_workflow_list_orders_by_priority() -> None:
     result = runner.invoke(app, ["workflow", "list"])
 

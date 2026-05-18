@@ -114,6 +114,9 @@ reconlab parse-nmap scans/target.xml
 
 # JSON for piping to jq
 reconlab parse-nmap scans/target.xml --output-format json | jq '.[] | select(.port=="445")'
+
+# No header row - friendlier for awk/cut/grep pipelines
+reconlab parse-nmap scans/target.xml --no-header | awk '{print $3}'   # ports only
 ```
 
 Example output:
@@ -156,6 +159,9 @@ reconlab parse-web outputs/feroxbuster.txt | grep -Ev '^404 '            # exclu
 reconlab parse-web outputs/dirs.txt --output-format json | jq '.[] | .url'
 reconlab parse-web outputs/dirs.txt --output-format json \
   | jq '.[] | select(.status == "200") | .url'
+
+# No header row - friendlier for awk/cut/grep pipelines
+reconlab parse-web outputs/dirs.txt --no-header | awk '{print $6}'   # URLs only
 ```
 
 Example output:
@@ -509,6 +515,9 @@ reconlab finding list --severity medium
 # JSON for piping to jq (filter applies before serialization)
 reconlab finding list --output-format json | jq '.[] | .title'
 reconlab finding list --severity high,critical --output-format json
+
+# No header row - friendlier for awk/cut/grep pipelines
+reconlab finding list --no-header | awk '{print $2}'   # severities only
 ```
 
 ```text
@@ -538,6 +547,12 @@ auto-selects them - reach them with `workflow show`.
 
 ```bash
 reconlab workflow list
+
+# JSON for piping to jq
+reconlab workflow list --output-format json | jq '.[] | select(.category=="service-enum")'
+
+# No header row - friendlier for awk/cut/grep
+reconlab workflow list --no-header | awk '{print $2}'   # IDs only
 ```
 
 ```text

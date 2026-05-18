@@ -297,7 +297,10 @@ def _colorize_severity(severity: str) -> str:
 
 
 def format_findings_table(
-    findings: list[ParsedFinding], *, colorize: bool = False
+    findings: list[ParsedFinding],
+    *,
+    colorize: bool = False,
+    header: bool = True,
 ) -> str:
     """Render a short table of findings for terminal output.
 
@@ -306,7 +309,8 @@ def format_findings_table(
     Column widths are computed from the plain text values so the table stays
     aligned regardless of the ANSI bytes. click strips the ANSI automatically
     when stdout is not a TTY, so callers can pass `colorize=True`
-    unconditionally.
+    unconditionally. When `header=False`, the header row and separator are
+    suppressed so the output is pure data rows - friendlier for shell pipes.
     """
     if not findings:
         return "No findings recorded yet."
@@ -335,11 +339,8 @@ def format_findings_table(
                 parts.append(value + pad)
         return "  ".join(parts)
 
-    separator = "  ".join("-" * w for w in widths)
-    return "\n".join(
-        [
-            render_row(headers, color=False),
-            separator,
-            *(render_row(row, color=colorize) for row in rows),
-        ]
-    )
+    body = [render_row(row, color=colorize) for row in rows]
+    if header:
+        separator = "  ".join("-" * w for w in widths)
+        return "\n".join([render_row(headers, color=False), separator, *body])
+    return "\n".join(body)

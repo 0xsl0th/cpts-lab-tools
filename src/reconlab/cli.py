@@ -332,7 +332,7 @@ def _run_suggest(
     )
 
 
-def format_services(services: list[dict[str, str]]) -> str:
+def format_services(services: list[dict[str, str]], *, header: bool = True) -> str:
     if not services:
         return "No open services found."
 
@@ -358,7 +358,10 @@ def format_services(services: list[dict[str, str]]) -> str:
         return "  ".join(value.ljust(widths[index]) for index, value in enumerate(row))
 
     separator = "  ".join("-" * width for width in widths)
-    return "\n".join([render_row(headers), separator, *(render_row(row) for row in rows)])
+    body = [render_row(row) for row in rows]
+    if header:
+        return "\n".join([render_row(headers), separator, *body])
+    return "\n".join(body)
 
 
 @app.command(
@@ -387,6 +390,13 @@ def parse_nmap(
             help="`table` (default) prints a fixed-width table; `json` emits a list of service dicts for piping to jq.",
         ),
     ] = TableOrJson.TABLE,
+    no_header: Annotated[
+        bool,
+        typer.Option(
+            "--no-header",
+            help="Suppress the header row and separator (table mode only). Easier piping to awk/cut/grep.",
+        ),
+    ] = False,
 ) -> None:
     """Parse an nmap XML file and print a clean open-service summary."""
     try:
@@ -397,7 +407,7 @@ def parse_nmap(
     if output_format is TableOrJson.JSON:
         typer.echo(json.dumps(services, indent=2))
     else:
-        typer.echo(format_services(services))
+        typer.echo(format_services(services, header=not no_header))
 
 
 @app.command(
@@ -447,6 +457,13 @@ def parse_web(
             help="`table` (default) prints a fixed-width table; `json` emits a list of result dicts for piping to jq.",
         ),
     ] = TableOrJson.TABLE,
+    no_header: Annotated[
+        bool,
+        typer.Option(
+            "--no-header",
+            help="Suppress the header row and separator (table mode only). Easier piping to awk/cut/grep.",
+        ),
+    ] = False,
 ) -> None:
     """Parse feroxbuster/gobuster/DirBuster output into a clean status/size/URL table."""
     try:
@@ -460,7 +477,7 @@ def parse_web(
     if output_format is TableOrJson.JSON:
         typer.echo(json.dumps(rows, indent=2))
     else:
-        typer.echo(format_web_results(rows))
+        typer.echo(format_web_results(rows, header=not no_header))
 
 
 _IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
@@ -1341,6 +1358,13 @@ def finding_list(
             help="`table` (default) prints a fixed-width table with color-coded severity; `json` emits a list of finding dicts for piping to jq.",
         ),
     ] = TableOrJson.TABLE,
+    no_header: Annotated[
+        bool,
+        typer.Option(
+            "--no-header",
+            help="Suppress the header row and separator (table mode only). Easier piping to awk/cut/grep.",
+        ),
+    ] = False,
 ) -> None:
     """Print the findings currently recorded in the workspace report.md."""
     try:
@@ -1362,7 +1386,7 @@ def finding_list(
     if output_format is TableOrJson.JSON:
         typer.echo(json.dumps([asdict(f) for f in findings], indent=2))
     else:
-        typer.echo(format_findings_table(findings, colorize=True))
+        typer.echo(format_findings_table(findings, colorize=True, header=not no_header))
 
 
 _CATEGORY_ORDER: dict[str, int] = {
@@ -1372,31 +1396,46 @@ _CATEGORY_ORDER: dict[str, int] = {
 }
 
 
-def _format_workflow_table() -> str:
-    headers = ["Category", "ID", "Display", "Priority", "Ports"]
-    rows: list[list[str]] = []
+def _workflow_records() -> list[dict[str, object]]:
+    """Return every known workflow as a JSON-ready dict, sorted as the table is."""
+    records: list[dict[str, object]] = []
     for service_id in all_workflow_ids():
         workflow = lookup_workflow(service_id)
         if workflow is None:
             continue
         port_list = ports_for(service_id)
-        ports_str = (
-            ", ".join(f"{port}/{proto}" for port, proto in port_list)
-            if port_list
-            else "-"
+        ports = [f"{port}/{proto}" for port, proto in port_list]
+        records.append(
+            {
+                "id": service_id,
+                "category": workflow.category,
+                "display_name": workflow.display_name,
+                "priority": workflow.priority,
+                "ports": ports,
+            }
         )
-        rows.append(
-            [
-                workflow.category,
-                service_id,
-                workflow.display_name,
-                str(workflow.priority),
-                ports_str,
-            ]
+    records.sort(
+        key=lambda r: (
+            _CATEGORY_ORDER.get(str(r["category"]), 99),
+            int(r["priority"]),  # type: ignore[arg-type]
+            str(r["id"]),
         )
-    rows.sort(
-        key=lambda r: (_CATEGORY_ORDER.get(r[0], 99), int(r[3]), r[1])
     )
+    return records
+
+
+def _format_workflow_table(*, header: bool = True) -> str:
+    headers = ["Category", "ID", "Display", "Priority", "Ports"]
+    rows: list[list[str]] = [
+        [
+            str(rec["category"]),
+            str(rec["id"]),
+            str(rec["display_name"]),
+            str(rec["priority"]),
+            ", ".join(rec["ports"]) if rec["ports"] else "-",  # type: ignore[arg-type]
+        ]
+        for rec in _workflow_records()
+    ]
 
     widths = [
         max(len(row[i]) for row in [headers, *rows]) for i in range(len(headers))
@@ -1406,19 +1445,42 @@ def _format_workflow_table() -> str:
         return "  ".join(value.ljust(widths[i]) for i, value in enumerate(row))
 
     separator = "  ".join("-" * w for w in widths)
-    return "\n".join([render_row(headers), separator, *(render_row(row) for row in rows)])
+    body = [render_row(row) for row in rows]
+    if header:
+        return "\n".join([render_row(headers), separator, *body])
+    return "\n".join(body)
 
 
 @workflow_app.command(
     "list",
     epilog=(
         "**Examples**\n\n\n\n"
-        "`reconlab workflow list`"
+        "`reconlab workflow list`\n\n\n\n"
+        "`reconlab workflow list --output-format json | jq '.[] | select(.category==\"service-enum\")'`\n\n\n\n"
+        "`reconlab workflow list --no-header | awk '{print $2}'`"
     ),
 )
-def workflow_list() -> None:
+def workflow_list(
+    output_format: Annotated[
+        TableOrJson,
+        typer.Option(
+            "--output-format",
+            help="`table` (default) prints a fixed-width table; `json` emits a list of workflow dicts for piping to jq.",
+        ),
+    ] = TableOrJson.TABLE,
+    no_header: Annotated[
+        bool,
+        typer.Option(
+            "--no-header",
+            help="Suppress the header row and separator (table mode only). Easier piping to awk/cut/grep.",
+        ),
+    ] = False,
+) -> None:
     """List every service workflow the tool knows about."""
-    typer.echo(_format_workflow_table())
+    if output_format is TableOrJson.JSON:
+        typer.echo(json.dumps(_workflow_records(), indent=2))
+    else:
+        typer.echo(_format_workflow_table(header=not no_header))
 
 
 @workflow_app.command(

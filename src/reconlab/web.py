@@ -262,11 +262,14 @@ def filter_by_status(
     return [row for row in rows if row.get("status") in allowed]
 
 
-def format_web_results(rows: list[dict[str, str]]) -> str:
+def format_web_results(
+    rows: list[dict[str, str]], *, header: bool = True
+) -> str:
     """Render a normalized result list as a fixed-width table.
 
     Redirect target (when present) is inlined into the URL column as
-    `original -> target` so the table stays compact.
+    `original -> target` so the table stays compact. `header=False`
+    suppresses the header row and separator for cleaner shell piping.
     """
     if not rows:
         return "No results found."
@@ -295,8 +298,11 @@ def format_web_results(rows: list[dict[str, str]]) -> str:
     def render_row(r: list[str]) -> str:
         return "  ".join(r[i].ljust(widths[i]) for i in range(len(r)))
 
-    separator = "  ".join("-" * w for w in widths)
-    return "\n".join([render_row(headers), separator, *(render_row(r) for r in body)])
+    rendered = [render_row(r) for r in body]
+    if header:
+        separator = "  ".join("-" * w for w in widths)
+        return "\n".join([render_row(headers), separator, *rendered])
+    return "\n".join(rendered)
 
 
 def merge_web_results(
