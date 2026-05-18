@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.2] - 2026-05-17
+
+### Changed
+
+- **Top-level `reconlab --help` Examples is now a stepped walkthrough.**
+  Previously a 4-bullet list of representative commands. Now a numbered
+  7-step typical-lab-session flow (`workspace init` -> nmap -> re-run
+  `make-hosts` -> `workspace suggest` -> `workspace ingest-web` -> `finding
+  add` -> `workspace check`), an "Anytime: status snapshot" entry, and a
+  "Standalone utilities" section for no-workspace one-offs (`parse-nmap`,
+  `parse-web`, `workflow show`/`list`, manual `make-hosts`). Each step has
+  its own description paragraph and the command on its own visual line, so
+  the rendering reads as a walkthrough rather than a list of names.
+  Subgroup `--help` Examples blocks unchanged - their concise per-command
+  lists are already scoped.
+
 ## [0.9.1] - 2026-05-17
 
 ### Changed
