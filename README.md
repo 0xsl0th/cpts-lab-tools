@@ -114,9 +114,9 @@ reconlab parse-nmap scans/target.xml
 Example output:
 
 ```text
-Host        Names           Port  Proto  Service  Product  Version
-----------  --------------  ----  -----  -------  -------  -------
-10.10.10.5  app.corp.local  80    tcp    http     nginx    1.18.0
+Host  Names   Port  Proto  Service  Product  Version
+----  ------  ----  -----  -------  -------  -------
+<ip>  <host>  80    tcp    http     nginx    1.18.0
 ```
 
 ### Parse feroxbuster / gobuster output
@@ -144,10 +144,10 @@ Example output:
 ```text
 Status  Method  Size  Words  Lines  URL
 ------  ------  ----  -----  -----  ----------------------------------
-200     GET     1234  46     4      http://10.10.10.5/admin
-301     GET     0     0      0      http://10.10.10.5/login -> /login/
-403     GET     287   12     2      http://10.10.10.5/.git
-200     GET     4567  62     8      http://10.10.10.5/api/users
+200     GET     1234  46     4      http://<ip>/admin
+301     GET     0     0      0      http://<ip>/login -> /login/
+403     GET     287   12     2      http://<ip>/.git
+200     GET     4567  62     8      http://<ip>/api/users
 ```
 
 gobuster doesn't track word/line counts, so those columns show `-` for gobuster
@@ -185,17 +185,17 @@ script results:
 
 ```text
 # Workspace: /home/you/labs/target
-# Target IP: 10.10.10.5
+# Target IP: <ip>
 # Hostname candidates:
-#   app.corp.local   (dns, ssl-cert CN, ssl-cert SAN, smb-os-discovery FQDN)
-#   intranet.corp.local   (http-title redirect)
-#   dev.app.corp.local   (ssl-cert SAN)
+#   <host>     (dns, ssl-cert CN, ssl-cert SAN, smb-os-discovery FQDN)
+#   <host-2>   (http-title redirect)
+#   <host-3>   (ssl-cert SAN)
 
 # Add this to /etc/hosts:
-10.10.10.5 app.corp.local intranet.corp.local dev.app.corp.local
+<ip> <host> <host-2> <host-3>
 
 # Or run:
-echo "10.10.10.5 app.corp.local intranet.corp.local dev.app.corp.local" | sudo tee -a /etc/hosts
+echo "<ip> <host> <host-2> <host-3>" | sudo tee -a /etc/hosts
 ```
 
 If `.reconlab.json` has no `target_ip` set, pass `--target-ip <ip>` to
@@ -288,7 +288,7 @@ reconlab workspace status ~/labs/target
 Workspace: target
 Path:      /home/op/labs/target
 
-  Target       10.10.10.5 · app.corp.local · corp.local
+  Target       <ip> · <host> · <domain>
   Platform     lab
   Scans        1 file (latest: initial.xml)
   Methodology  notes/methodology/  - STALE (newer scans present)
@@ -497,7 +497,7 @@ reconlab suggest-next -i scans/target.xml
 Excerpt of the default `md` output:
 
 ```markdown
-# Methodology - 10.10.10.5
+# Methodology - <ip>
 
 ## Detected Services
 
