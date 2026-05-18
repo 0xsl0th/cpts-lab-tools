@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`finding list` is now color-coded by severity.** Critical renders in
+  bold red, High in bright red, Medium in yellow, Low in cyan, Info dim.
+  Column widths are computed from plain text so the table stays aligned
+  regardless of the ANSI bytes, and click auto-strips ANSI when output is
+  piped to a file or another command (so grep/jq pipelines still work).
+- **`finding list --severity <list>` filter.** Comma-separated, case-
+  insensitive list of severities to keep (`critical,high,medium,low,info`).
+  Applies before rendering, so it works for both the default table and
+  `--output-format json`. Unknown severity values exit non-zero with a
+  list of valid ones rather than silently filtering to nothing.
+
+### Fixed
+
+- **`vhost-suggest` sample-output block in the README now uses placeholders.**
+  The 0.12.0 addition leaked concrete hostnames (`intranet.corp.local`,
+  `dev.app.corp.local`, `app`) into the rendered sample block; replaced
+  with `<host>` / `<host-2>` / `<host-3>` to match the placeholder
+  convention used throughout the rest of the README.
+
 ## [0.12.0] - 2026-05-18
 
 ### Added

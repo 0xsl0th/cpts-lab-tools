@@ -1224,12 +1224,16 @@ def finding_add(
     )
 
 
+_KNOWN_SEVERITIES = {s.display.lower() for s in Severity}
+
+
 @finding_app.command(
     "list",
     epilog=(
         "**Examples**\n\n\n\n"
         "`reconlab finding list` -- cwd\n\n\n\n"
         "`reconlab finding list ~/labs/target`\n\n\n\n"
+        "`reconlab finding list --severity high,critical`\n\n\n\n"
         "`reconlab finding list --output-format json | jq '.[] | select(.severity==\"High\")'`"
     ),
 )
@@ -1238,11 +1242,21 @@ def finding_list(
         Path,
         typer.Argument(help="Workspace path (defaults to the current directory)."),
     ] = Path("."),
+    severity: Annotated[
+        str | None,
+        typer.Option(
+            "--severity",
+            help=(
+                "Comma-separated severities to keep (case-insensitive). "
+                "Valid values: critical, high, medium, low, info. Default: all."
+            ),
+        ),
+    ] = None,
     output_format: Annotated[
         TableOrJson,
         typer.Option(
             "--output-format",
-            help="`table` (default) prints a fixed-width table; `json` emits a list of finding dicts for piping to jq.",
+            help="`table` (default) prints a fixed-width table with color-coded severity; `json` emits a list of finding dicts for piping to jq.",
         ),
     ] = TableOrJson.TABLE,
 ) -> None:
@@ -1252,10 +1266,21 @@ def finding_list(
     except FileNotFoundError as exc:
         raise typer.BadParameter(str(exc)) from exc
 
+    if severity:
+        requested = [s.strip().lower() for s in severity.split(",") if s.strip()]
+        unknown = [s for s in requested if s not in _KNOWN_SEVERITIES]
+        if unknown:
+            raise typer.BadParameter(
+                f"Unknown severity value(s): {', '.join(unknown)}. "
+                f"Valid: critical, high, medium, low, info."
+            )
+        allowed = set(requested)
+        findings = [f for f in findings if f.severity.strip().lower() in allowed]
+
     if output_format is TableOrJson.JSON:
         typer.echo(json.dumps([asdict(f) for f in findings], indent=2))
     else:
-        typer.echo(format_findings_table(findings))
+        typer.echo(format_findings_table(findings, colorize=True))
 
 
 _CATEGORY_ORDER: dict[str, int] = {

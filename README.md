@@ -454,7 +454,23 @@ What `finding add` does:
 - Severity is restricted to `critical | high | medium | low | info`.
 
 `finding list` prints the current findings as a one-line-per-finding table -
-handy for sanity-checking what is captured so far without opening the file:
+handy for sanity-checking what is captured so far without opening the file.
+Severity is color-coded in the terminal (Critical bold-red, High bright-red,
+Medium yellow, Low cyan, Info dim); ANSI codes are auto-stripped when output
+is piped to a file or another command.
+
+```bash
+reconlab finding list
+reconlab finding list ~/labs/target
+
+# Filter by severity (comma-separated, case-insensitive)
+reconlab finding list --severity high,critical
+reconlab finding list --severity medium
+
+# JSON for piping to jq (filter applies before serialization)
+reconlab finding list --output-format json | jq '.[] | .title'
+reconlab finding list --severity high,critical --output-format json
+```
 
 ```text
 #  Severity  Title                        Service:Port

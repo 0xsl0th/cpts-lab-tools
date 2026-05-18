@@ -273,8 +273,41 @@ def real_findings(findings: list[ParsedFinding]) -> list[ParsedFinding]:
     return [f for f in findings if f.title.strip() != _PLACEHOLDER_TITLE]
 
 
-def format_findings_table(findings: list[ParsedFinding]) -> str:
-    """Render a short table of findings for terminal output."""
+_ANSI_RESET = "\033[0m"
+
+# Raw ANSI sequences keyed by canonical (capitalized) severity. `typer.echo` /
+# `click.echo` automatically strip these when stdout is not a TTY (pipe to
+# grep, file redirect, CI capture), so passing colorize=True is safe by default.
+_SEVERITY_ANSI: dict[str, str] = {
+    "Critical": "\033[1;31m",   # bold red
+    "High": "\033[91m",         # bright red
+    "Medium": "\033[33m",       # yellow
+    "Low": "\033[36m",          # cyan
+    "Info": "\033[90m",         # bright black (dim)
+}
+
+
+def _colorize_severity(severity: str) -> str:
+    """Wrap a severity string in ANSI color codes; pass-through if unknown."""
+    canonical = severity.strip().capitalize()
+    code = _SEVERITY_ANSI.get(canonical)
+    if code is None:
+        return severity
+    return f"{code}{severity}{_ANSI_RESET}"
+
+
+def format_findings_table(
+    findings: list[ParsedFinding], *, colorize: bool = False
+) -> str:
+    """Render a short table of findings for terminal output.
+
+    When `colorize=True`, the Severity column is wrapped in ANSI color codes
+    (Critical bold-red, High bright-red, Medium yellow, Low cyan, Info dim).
+    Column widths are computed from the plain text values so the table stays
+    aligned regardless of the ANSI bytes. click strips the ANSI automatically
+    when stdout is not a TTY, so callers can pass `colorize=True`
+    unconditionally.
+    """
     if not findings:
         return "No findings recorded yet."
 
@@ -292,8 +325,21 @@ def format_findings_table(findings: list[ParsedFinding]) -> str:
         max(len(row[i]) for row in [headers, *rows]) for i in range(len(headers))
     ]
 
-    def render_row(row: list[str]) -> str:
-        return "  ".join(value.ljust(widths[i]) for i, value in enumerate(row))
+    def render_row(row: list[str], *, color: bool) -> str:
+        parts: list[str] = []
+        for index, value in enumerate(row):
+            pad = " " * (widths[index] - len(value))
+            if color and index == 1:
+                parts.append(_colorize_severity(value) + pad)
+            else:
+                parts.append(value + pad)
+        return "  ".join(parts)
 
     separator = "  ".join("-" * w for w in widths)
-    return "\n".join([render_row(headers), separator, *(render_row(row) for row in rows)])
+    return "\n".join(
+        [
+            render_row(headers, color=False),
+            separator,
+            *(render_row(row, color=colorize) for row in rows),
+        ]
+    )

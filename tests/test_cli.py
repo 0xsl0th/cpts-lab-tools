@@ -1182,6 +1182,110 @@ def test_parse_web_json_output_emits_list_of_result_dicts() -> None:
         assert field in sample
 
 
+def _seed_findings_workspace(tmp_path: Path) -> Path:
+    runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    workspace = tmp_path / "target"
+    for title, sev, svc in [
+        ("RCE in admin panel", "critical", "http"),
+        ("SMB null session", "high", "smb"),
+        ("Verbose error pages", "medium", "http"),
+        ("Banner disclosure", "low", "ssh"),
+    ]:
+        runner.invoke(
+            app,
+            [
+                "finding", "add",
+                "--title", title,
+                "--severity", sev,
+                "--service", svc,
+                str(workspace),
+            ],
+        )
+    return workspace
+
+
+def test_finding_list_color_includes_ansi_in_severity_when_color_enabled(
+    tmp_path: Path,
+) -> None:
+    workspace = _seed_findings_workspace(tmp_path)
+    result = runner.invoke(app, ["finding", "list", str(workspace)], color=True)
+
+    assert result.exit_code == 0, result.output
+    # Critical is wrapped in bold-red ANSI (\033[1;31m...\033[0m).
+    assert "\x1b[1;31mCritical\x1b[0m" in result.output
+    # High is bright-red, Medium yellow, Low cyan.
+    assert "\x1b[91mHigh\x1b[0m" in result.output
+    assert "\x1b[33mMedium\x1b[0m" in result.output
+    assert "\x1b[36mLow\x1b[0m" in result.output
+
+
+def test_finding_list_strips_ansi_when_not_tty(tmp_path: Path) -> None:
+    workspace = _seed_findings_workspace(tmp_path)
+    result = runner.invoke(app, ["finding", "list", str(workspace)])  # default color=False
+
+    assert result.exit_code == 0, result.output
+    assert "\x1b[" not in result.output
+    assert "Critical" in result.output
+
+
+def test_finding_list_filters_by_severity(tmp_path: Path) -> None:
+    workspace = _seed_findings_workspace(tmp_path)
+    result = runner.invoke(
+        app, ["finding", "list", str(workspace), "--severity", "high,critical"]
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "RCE in admin panel" in result.output  # critical
+    assert "SMB null session" in result.output    # high
+    assert "Verbose error pages" not in result.output  # medium - filtered out
+    assert "Banner disclosure" not in result.output    # low - filtered out
+
+
+def test_finding_list_severity_filter_is_case_insensitive(tmp_path: Path) -> None:
+    workspace = _seed_findings_workspace(tmp_path)
+    upper = runner.invoke(
+        app, ["finding", "list", str(workspace), "--severity", "HIGH"]
+    )
+    lower = runner.invoke(
+        app, ["finding", "list", str(workspace), "--severity", "high"]
+    )
+    mixed = runner.invoke(
+        app, ["finding", "list", str(workspace), "--severity", "High"]
+    )
+    assert upper.output == lower.output == mixed.output
+
+
+def test_finding_list_severity_filter_rejects_unknown_value(tmp_path: Path) -> None:
+    workspace = _seed_findings_workspace(tmp_path)
+    result = runner.invoke(
+        app, ["finding", "list", str(workspace), "--severity", "foobar"]
+    )
+
+    assert result.exit_code != 0
+    assert "Unknown severity" in strip_ansi(result.output)
+    assert "foobar" in strip_ansi(result.output)
+
+
+def test_finding_list_severity_filter_applies_to_json_output(tmp_path: Path) -> None:
+    workspace = _seed_findings_workspace(tmp_path)
+    result = runner.invoke(
+        app,
+        [
+            "finding", "list", str(workspace),
+            "--severity", "critical",
+            "--output-format", "json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert len(data) == 1
+    assert data[0]["title"] == "RCE in admin panel"
+
+
 def test_workflow_list_includes_known_services() -> None:
     result = runner.invoke(app, ["workflow", "list"])
 
