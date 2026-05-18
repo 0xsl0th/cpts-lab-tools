@@ -137,15 +137,24 @@ reconlab parse-web outputs/feroxbuster.json
 reconlab parse-web outputs/gobuster.txt
 reconlab parse-web outputs/dirbuster.txt
 
-# Filter to specific status codes
-reconlab parse-web outputs/feroxbuster.txt --status 200,301,403
-
 # Force a specific parser
 reconlab parse-web outputs/scan.txt --input-format feroxbuster
 reconlab parse-web outputs/scan.txt --input-format dirbuster
 
-# JSON for piping to jq
+# Filter to specific status codes:
+#   --status pre-filters BEFORE rendering (so the table widths stay aligned and the
+#   filter applies before --output-format json serializes). For simple table
+#   filtering on a single file, plain grep on the rendered output works too -
+#   each data row starts with the 3-digit status code.
+reconlab parse-web outputs/feroxbuster.txt --status 200,301,403
+reconlab parse-web outputs/feroxbuster.txt | grep -E '^200 '
+reconlab parse-web outputs/feroxbuster.txt | grep -E '^[23][0-9]{2} '   # all 2xx + 3xx
+reconlab parse-web outputs/feroxbuster.txt | grep -Ev '^404 '            # exclude 404 noise
+
+# JSON for piping to jq (grep does not understand JSON - use jq or --status instead)
 reconlab parse-web outputs/dirs.txt --output-format json | jq '.[] | .url'
+reconlab parse-web outputs/dirs.txt --output-format json \
+  | jq '.[] | select(.status == "200") | .url'
 ```
 
 Example output:
