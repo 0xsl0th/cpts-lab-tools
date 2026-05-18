@@ -47,7 +47,9 @@ End-to-end flow for a typical lab target. Replace placeholders with the
 real values your lab gives you.
 
 ```bash
-# 1. Scaffold a workspace with metadata baked in.
+# 1. Scaffold a workspace with metadata baked in. Init prints a suggested
+#    /etc/hosts line built from --ip / --host / --domain - paste the echo
+#    command it shows to map the hostname locally. Does NOT touch any file.
 reconlab workspace init target \
   --ip 10.10.10.5 \
   --host app.corp.local \
@@ -56,14 +58,12 @@ reconlab workspace init target \
 
 cd target
 
-# 2. (Optional) Print the /etc/hosts entry and a copy-paste shell command.
-#    Does NOT modify /etc/hosts - you run the printed command yourself.
-#    Reads target IP/host from .reconlab.json; re-run after nmap to also pick
-#    up hostnames from ssl-cert SANs, http-title redirects, and SMB FQDN.
-reconlab make-hosts
-
-# 3. Run nmap into the workspace's scans/ folder.
+# 2. Run nmap into the workspace's scans/ folder.
 sudo nmap -sV -sC -p- -oA scans/initial 10.10.10.5
+
+# 3. (Optional) Re-run make-hosts to pick up hostnames discovered by the scan:
+#    ssl-cert SANs, http-title redirects, SMB FQDN. Skip if no new hostnames.
+reconlab make-hosts
 
 # 4. Generate prioritized, service-by-service methodology as an Obsidian vault.
 #    Metadata from the workspace (target IP / host / domain) is filled in

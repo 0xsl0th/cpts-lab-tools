@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `--ip/--host/--aliases`) are unchanged and trigger automatically when the
   first positional is an IPv4 address. A new `--target-ip` flag overrides the
   workspace's metadata IP for a single run.
+- **`workspace init` now prints a suggested `/etc/hosts` line at the end of
+  init output** when `--ip` is set together with `--host`, including the
+  FQDN form (`host.domain`) when `--domain` is also passed. Removes the
+  need to re-type IP/host just to format the hosts entry. Still read-only -
+  reconlab never modifies `/etc/hosts` itself.
 
 ## [0.7.0] - 2026-05-15
 

@@ -637,6 +637,58 @@ def test_workspace_init_creates_layout_and_report(tmp_path: Path) -> None:
     assert "Initialized workspace" in result.output
 
 
+def test_workspace_init_prints_hosts_suggestion_when_ip_and_host_set(
+    tmp_path: Path,
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "workspace", "init", "target",
+            "--ip", "10.10.10.5",
+            "--host", "app.corp.local",
+            "-o", str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Suggested /etc/hosts entry:" in result.output
+    assert "10.10.10.5 app.corp.local" in result.output
+    assert 'sudo tee -a /etc/hosts' in result.output
+
+
+def test_workspace_init_includes_fqdn_when_domain_set(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "workspace", "init", "target",
+            "--ip", "10.10.10.5",
+            "--host", "app",
+            "--domain", "corp.local",
+            "-o", str(tmp_path),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Suggested /etc/hosts entry:" in result.output
+    assert "10.10.10.5 app app.corp.local" in result.output
+
+
+def test_workspace_init_omits_hosts_suggestion_without_ip(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["workspace", "init", "target", "--host", "app.corp.local", "-o", str(tmp_path)],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Suggested /etc/hosts entry:" not in result.output
+
+
+def test_workspace_init_omits_hosts_suggestion_without_host(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["workspace", "init", "target", "--ip", "10.10.10.5", "-o", str(tmp_path)],
+    )
+    assert result.exit_code == 0, result.output
+    assert "Suggested /etc/hosts entry:" not in result.output
+
+
 def test_workspace_init_refuses_existing_without_force(tmp_path: Path) -> None:
     runner.invoke(
         app,

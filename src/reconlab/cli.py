@@ -645,7 +645,25 @@ def workspace_init(
     if metadata.domain:
         typer.echo(f"  Domain: {metadata.domain}")
     typer.echo(f"  Platform: {metadata.platform}")
+    _print_init_hosts_hint(workspace)
     typer.echo("Next: drop an nmap scan into scans/, then run `reconlab workspace suggest`.")
+
+
+def _print_init_hosts_hint(workspace: Path) -> None:
+    """Emit a /etc/hosts suggestion line based on freshly-written workspace metadata.
+
+    Silent no-op when metadata lacks an IP or yields no hostname candidates,
+    since at init time the only candidate source is the metadata itself.
+    """
+    resolved_ip, aggregated = collect_hostname_candidates(workspace)
+    if resolved_ip is None or not aggregated:
+        return
+    hostnames = [agg.hostname for agg in aggregated]
+    line = f"{resolved_ip} {' '.join(hostnames)}"
+    typer.echo("")
+    typer.echo("Suggested /etc/hosts entry:")
+    typer.echo(f"  {line}")
+    typer.echo(f'  echo "{line}" | sudo tee -a /etc/hosts')
 
 
 @workspace_app.command("suggest")
