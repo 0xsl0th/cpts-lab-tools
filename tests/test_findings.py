@@ -230,8 +230,9 @@ def test_parse_findings_extracts_severity_and_service(tmp_path: Path) -> None:
     findings = list_findings(workspace)
     assert [f.number for f in findings] == [1, 2]
     assert findings[0].severity == "High"
-    assert "smb:445" in findings[0].service_port
+    assert findings[0].service_port == "smb:445"
     assert findings[1].severity == "Low"
+    assert findings[1].service_port == "http:80"
 
 
 def test_list_findings_on_fresh_workspace_returns_placeholder(tmp_path: Path) -> None:

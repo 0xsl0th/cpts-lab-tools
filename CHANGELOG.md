@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`finding list` no longer leaks raw markdown into the `Service:Port`
+  column.** The parser used to split the `Affected:` line on the first `-`
+  (the markdown list marker), so the column rendered as
+  `**Affected:** \`<ip>\` (\`<host>\`) - \`smb` instead of `smb:445`. Now
+  uses a tail-anchored regex that extracts just the trailing
+  backtick-quoted token. Existing test tightened from substring match to
+  exact match so this can't regress silently.
+- **`workspace archive` no longer nests prior archives.** Running
+  `reconlab workspace archive` from inside the workspace writes the
+  tarball into the workspace itself (by design - that's the documented
+  default). Re-running it would then bundle the prior `*-archive.tar.gz`
+  inside the new one, growing the file on every run. The filter now
+  excludes any name ending in `-archive.tar.gz`, so repeated runs stay
+  flat.
+
 ## [0.15.0] - 2026-05-18
 
 ### Added

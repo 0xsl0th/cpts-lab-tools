@@ -242,6 +242,7 @@ _ARCHIVE_EXCLUDE_DIRS: frozenset[str] = frozenset(
 )
 _ARCHIVE_EXCLUDE_SUFFIXES: tuple[str, ...] = (".pyc", ".pyo")
 _ARCHIVE_EXCLUDE_NAMES: frozenset[str] = frozenset({".DS_Store", "Thumbs.db"})
+_ARCHIVE_EXCLUDE_NAME_SUFFIXES: tuple[str, ...] = ("-archive.tar.gz",)
 
 
 @dataclass
@@ -265,7 +266,8 @@ def create_archive(
     workspace's directory name) so extracting it produces one clean folder.
     Excluded directories: __pycache__, .venv / venv / env, .git, ruff/mypy/
     pytest cache dirs. Excluded by suffix: .pyc / .pyo. Excluded by name:
-    .DS_Store, Thumbs.db.
+    .DS_Store, Thumbs.db. Excluded by trailing pattern: `*-archive.tar.gz`
+    (so re-archiving from inside the workspace does not nest a prior tarball).
 
     Raises FileNotFoundError when *workspace* is not a reconlab workspace
     (no `.reconlab.json` present); raises FileExistsError when the output
@@ -293,6 +295,8 @@ def create_archive(
         if rel.name in _ARCHIVE_EXCLUDE_NAMES:
             return None
         if rel.suffix in _ARCHIVE_EXCLUDE_SUFFIXES:
+            return None
+        if any(rel.name.endswith(suffix) for suffix in _ARCHIVE_EXCLUDE_NAME_SUFFIXES):
             return None
         if tarinfo.isfile():
             file_count += 1

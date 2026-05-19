@@ -13,6 +13,7 @@ from .workspace import WorkspaceMetadata, read_metadata
 _HEADING_RE = re.compile(r"^### Finding (\d+) - (.*)$")
 _FINDINGS_SECTION_RE = re.compile(r"^## Findings\s*$")
 _NEXT_SECTION_RE = re.compile(r"^## ")
+_AFFECTED_TAIL_RE = re.compile(r" - (?:port )?`([^`]+)`\s*$")
 _PLACEHOLDER_TITLE = "_Title_"
 
 
@@ -155,9 +156,9 @@ def _parse_findings_in_range(
         if lines[i].startswith("- **Severity:**"):
             current.severity = lines[i].split("**Severity:**", 1)[1].strip()
         elif lines[i].startswith("- **Affected:**"):
-            tail = lines[i].split("-", 1)
-            if len(tail) > 1:
-                current.service_port = tail[1].strip().strip("`")
+            m = _AFFECTED_TAIL_RE.search(lines[i])
+            if m:
+                current.service_port = m.group(1)
     if current is not None:
         # Trim trailing blank lines from the last block.
         block_end = end

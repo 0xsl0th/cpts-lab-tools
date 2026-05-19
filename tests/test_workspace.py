@@ -405,6 +405,20 @@ def test_create_archive_excludes_pycache_pyc_dsstore_and_caches(
     assert not any(".ruff_cache" in n for n in names)
 
 
+def test_create_archive_excludes_prior_archive_tarballs(tmp_path: Path) -> None:
+    workspace = _setup_workspace_with_scan(tmp_path, include_scan=False)
+    # Simulate a prior `reconlab workspace archive` run that wrote the tarball
+    # into the workspace itself (the CLI default when run from inside it).
+    (workspace / f"{workspace.name}-archive.tar.gz").write_bytes(b"prior")
+    (workspace / "loot" / "anything-archive.tar.gz").write_bytes(b"nested")
+    output = tmp_path / "out.tar.gz"
+
+    create_archive(workspace, output, archive_name="ws")
+
+    names = _archive_member_names(output)
+    assert not any(n.endswith("-archive.tar.gz") for n in names)
+
+
 def test_create_archive_raises_when_path_is_not_a_workspace(tmp_path: Path) -> None:
     output = tmp_path / "out.tar.gz"
     with pytest.raises(FileNotFoundError):
